@@ -1,0 +1,7 @@
+httpx==0.28.1
+beautifulsoup4==4.12.3
+lxml>=5.3
+pydantic>=2.9,<3
+fastembed==0.9.1
+chromadb==1.5.9
+pytest>=8.3,<9

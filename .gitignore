@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
+# Generated / downloaded (rebuild with the pipeline commands in the README)
+# data/raw/
+# data/chroma/
+# data/models/
+# data/comparison.db
