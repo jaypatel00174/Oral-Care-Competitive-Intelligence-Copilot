@@ -1,8 +1,11 @@
-"""STEP 3 - Services (planned): the AI logic, built with LangChain + LangGraph.
-Reads the files written by the pipeline; never scrapes and knows nothing about HTTP.
+"""Services: the assistant's logic, built with LangChain + LangGraph.
+Reads SQLite and Chroma through src.storage; never scrapes and knows nothing about HTTP.
 
-    retrieval.py   find relevant products and snippets for a question
-    llm.py         LangChain chat model, configured from environment variables
-    graph.py       LangGraph workflow: input guard -> retrieve -> answer -> output guard
-                   (the guards come from src.guardrails)
+    assistant.py      ask(question) -> Answer   (the one function everything else calls)
+    graph.py          LangGraph workflow: input_guard -> retrieve -> write -> output_guard
+    retrieval.py      understand the question; collect facts (SQLite) and snippets (Chroma)
+    answer_writer.py  the offline writer (code only) and the LLM writer
+    llm.py            the chat model, configured from .env (none = offline writer)
+
+The guards come from src.guardrails.
 """

@@ -182,6 +182,8 @@ def parse_product(html: str, url: str) -> tuple[Product, list[Snippet]]:
 
     # ---- description block ---------------------------------------------------
     # The descriptive text sits between the "More Information" heading and the warranty FAQ.
+    try:
+        start = lines.index("More Information") + 1
     except ValueError:
         start = 0
     end = next((i for i in range(start, len(lines)) if lines[i].startswith("What is covered in my")), len(lines))

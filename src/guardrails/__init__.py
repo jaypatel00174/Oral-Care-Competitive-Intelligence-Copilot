@@ -1,7 +1,9 @@
-"""Guardrails (planned): rules that keep answers safe and grounded.
-Called by the LangGraph workflow in src.services, before and after the LLM.
+"""Guardrails: the rules that keep answers safe and grounded.
 
-    input_checks.py    detect prompt injection; block medical / dental advice requests
-    grounding.py       every claim must cite a real snippet id, else say "not found in sources"
-    refusals.py        the fixed refusal messages
+    input_checks.py   BEFORE retrieval: refuse prompt injection, medical/dental advice, empty or
+                      oversized questions; also flags instruction-like text inside scraped snippets
+    grounding.py      AFTER writing: every citation real, every number in the evidence, no foreign links
+    refusals.py       the fixed messages (and the phrase "not found in sources")
+
+Called by the LangGraph workflow in src.services.graph.
 """

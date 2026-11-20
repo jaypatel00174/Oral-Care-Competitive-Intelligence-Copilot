@@ -104,3 +104,31 @@ ATTRIBUTE_LABELS = {
     "included_items": "Included items",
     "warranty": "Warranty",
 }
+
+
+class Citation(BaseModel):
+    """One source the assistant relied on: a snippet plus where it came from."""
+
+    id: str           # snippet id, e.g. "PH-HX9903_15#019"
+    product_id: str
+    product_name: str
+    section: str
+    text: str         # the verbatim source text
+    source_url: str   # the page to open to check it
+
+
+class Answer(BaseModel):
+    """What the assistant returns for one question. The API, CLI and evaluation all use this."""
+
+    question: str
+    # "answered"     facts were found and cited
+    # "not_found"    nothing in the collected sources answers it (we say so, we never guess)
+    # "refused"      blocked by a guardrail (see `reason`)
+    # "out_of_scope" not about these toothbrushes
+    status: str
+    text: str
+    citations: list[Citation] = Field(default_factory=list)
+    reason: str | None = None            # why it was refused, e.g. "prompt_injection"
+    used_llm: bool = False               # True if an LLM wrote the final text
+    fell_back: bool = False              # True if the LLM draft failed the checks and we used the safe writer
+    retrieved_ids: list[str] = Field(default_factory=list)  # every snippet id the assistant could see
