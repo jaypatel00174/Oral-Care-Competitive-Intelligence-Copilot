@@ -2,8 +2,8 @@
 
 A tool that builds a structured, apples-to-apples feature comparison between
 **Philips Sonicare** and **Oral-B** electric toothbrushes, using only public
-US website content, and (planned) answers comparison questions with cited,
-grounded responses.
+US website content, and answers comparison questions with cited, grounded
+responses.
 
 Built for the Philips Personal Health GenAI case study (Case Study 1).
 The original brief is in [`docs/Philips_PH_GenAI_Case_Studies.docx`](docs/Philips_PH_GenAI_Case_Studies.docx).
@@ -14,10 +14,11 @@ The original brief is in [`docs/Philips_PH_GenAI_Case_Studies.docx`](docs/Philip
 |---|---|
 | Scraping + normalization (`src/scraping`, `src/pipeline`) | Done: 12 Philips + 8 Oral-B products |
 | Storage: SQLite + Chroma vector search (`src/storage`) | Done |
-| Tests (`tests/`) | Done (14 tests) |
-| Guardrails (`src/guardrails`) | Planned |
-| LangChain / LangGraph assistant (`src/services`) | Planned |
-| FastAPI backend + CLI (`src/app`) | Planned |
+| Tests (`tests/`) | Done (79 tests; none need an LLM) |
+| Guardrails (`src/guardrails`) | Done: prompt injection, medical advice, grounding check |
+| LangChain / LangGraph assistant (`src/services`) | Done; tested offline, with a fake model, and with a local `qwen2.5:7b` through Ollama (12 sample questions) |
+| CLI (`src/app/cli.py`) | Done |
+| FastAPI backend (`src/app`) | Planned |
 | MCP tool layer, bonus (`src/mcp_server`) | Planned |
 | Evaluation suite, 15+ questions (`src/evaluation`) | Planned |
 | `docs/report.md` | Planned |
@@ -58,6 +59,38 @@ The first run takes a minute or two because requests are throttled to one every
 | `data/chroma/` | Chroma vector index of the snippets for meaning-based search. Git-ignored. |
 | `data/models/` | Downloaded embedding model (git-ignored). |
 | `data/raw/` | Cached downloaded HTML (git-ignored). |
+
+## Asking the assistant
+
+```powershell
+python -m src.app.cli "What is the timer on the Oral-B iO9?"
+python -m src.app.cli "Compare the pressure sensor on the Sonicare 9300 and the iO9"
+python -m src.app.cli "Which is the cheapest Oral-B with a pressure sensor?"
+python -m src.app.cli            # interactive; add --json for the full answer, --offline to skip the LLM
+```
+
+Every answer cites snippet ids like `[PH-HX9903_15#019]` and lists the source pages. When the pages
+do not state something, the answer says `not found in sources` instead of guessing.
+
+How a question flows (`src/services/graph.py`): **input guard** (refuses prompt injection, medical
+or dental advice) → **retrieve** (exact facts from SQLite, page text from Chroma, or out of scope)
+→ **write** → **output guard** (every citation must be a retrieved snippet, every number must appear
+in the evidence, no foreign links; otherwise a safe code-only answer replaces the draft).
+
+**LLM (optional).** With no model configured the assistant uses a code-only writer, so everything
+works offline. To use an LLM, set `LLM_MODEL`, `LLM_BASE_URL` and `LLM_API_KEY` in `.env` (see
+`.env.example`). Any OpenAI-compatible endpoint works, including local Ollama. If the model is
+unreachable or its draft fails the checks, the answer falls back to the code-only writer.
+
+Local open-source setup used during development (Windows):
+
+```powershell
+winget install Ollama.Ollama          # then start Ollama (the installer normally does)
+ollama pull qwen2.5:7b                # about 4.7 GB
+# .env:  LLM_BASE_URL=http://localhost:11434/v1   LLM_MODEL=qwen2.5:7b
+```
+
+On a CPU a typical answer takes about 10 seconds (up to about 30 for long ones).
 
 ## Querying the data yourself
 
@@ -100,7 +133,7 @@ Both print a report and write no files. See the header of each script for the se
         |  src/pipeline/build_stores.py  -> src/storage
         v
  SQLite (exact facts)  +  Chroma (search by meaning)
-        |  src/guardrails + src/services + src/mcp_server   (planned)
+        |  src/guardrails + src/services (LangGraph)      src/mcp_server (planned)
         v
    grounded, cited answers  --->  src/app (FastAPI)  and  src/evaluation
 ```
@@ -115,10 +148,10 @@ Scraper compliance notes: [`docs/scraper/robots-txt-check.md`](docs/scraper/robo
 | `src/scraping` | Download pages (`fetcher.py`) and parse each website (`philips.py`, `oralb.py`). | **Yes, only here** |
 | `src/pipeline` | `build_dataset.py` runs the scrapers and writes the output files; `build_stores.py` loads them into the databases. | Only `build_dataset` (via scraping) |
 | `src/storage` | `sql_store.py` (SQLite, exact facts) and `vector_store.py` (Chroma, search by meaning). Both share snippet ids. | No (embedding model runs locally) |
-| `src/guardrails` | (planned) refuse unknowns, block prompt injection and medical advice. | No |
-| `src/services` | (planned) the LangChain + LangGraph assistant. | No |
+| `src/guardrails` | Refuse prompt injection and medical advice before answering; check every answer for real citations and supported numbers. | No |
+| `src/services` | The LangChain + LangGraph assistant: `ask(question)` returns a cited `Answer`. | Only if you configure a hosted LLM |
 | `src/mcp_server` | (planned) read-only MCP tools over the data. | No |
-| `src/app` | (planned) FastAPI endpoints and CLI. | No |
+| `src/app` | `cli.py` (command line); FastAPI endpoints are planned. | No |
 | `src/evaluation` | (planned) test questions, checks and a report. | No |
 | `tests/` | pytest unit tests. | No |
 | `scripts/` | One-command helpers (`build_data.ps1` / `build_data.sh`). | Via pipeline |

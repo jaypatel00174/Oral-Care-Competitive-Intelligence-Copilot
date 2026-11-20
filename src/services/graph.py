@@ -1,0 +1,124 @@
+"""The assistant's workflow, built with LangGraph.
+
+    question
+       |
+       v
+   input_guard   refuse prompt injection, medical advice, empty or oversized questions
+       |
+       v
+   retrieve      facts from SQLite + snippets from Chroma (or: out of scope)
+       |
+       v
+     write       an LLM drafts the answer if one is configured, otherwise the offline writer does
+       |
+       v
+   output_guard  every citation real? every number in the evidence? If the LLM draft fails,
+       |         replace it with the offline writer's answer (always grounded)
+       v
+     answer
+
+Each box is a small function below. A node that produces the final `answer` ends the run early,
+so a refused question never reaches retrieval or the LLM.
+"""
+from __future__ import annotations
+
+from typing import TypedDict
+from langgraph.graph import END, START, StateGraph
+
+from src.common.schema import Answer
+from src.guardrails import grounding, refusals
+from src.guardrails.input_checks import check_question, touches_health_topic
+from src.services import answer_writer, retrieval
+
+
+class State(TypedDict, total=False):
+    """The data passed from one step to the next."""
+
+    question: str
+    context: retrieval.Context
+    draft: str
+    used_llm: bool
+    fell_back: bool
+    answer: Answer
+
+
+def _finish(ctx: retrieval.Context, text: str, used_llm: bool, fell_back: bool) -> Answer:
+    """Build the final Answer: resolve citation ids to sources and set the status."""
+    citations = [ctx.snippets[i] for i in grounding.cited_ids(text) if i in ctx.snippets]
+    status = "answered" if citations else "not_found"
+    if status == "answered" and touches_health_topic(ctx.question):
+        text += "\n\n" + refusals.HEALTH_NOTE
+    return Answer(question=ctx.question, status=status, text=text, citations=citations,
+                  used_llm=used_llm, fell_back=fell_back, retrieved_ids=list(ctx.snippets))
+
+
+def build_graph(llm=None):
+    """Compile the workflow. `llm` is a LangChain chat model, or None for the offline writer."""
+
+    def input_guard(state: State) -> dict:
+        verdict = check_question(state["question"])
+        if verdict.allowed:
+            return {}
+        return {"answer": Answer(question=state["question"], status="refused",
+                                 text=verdict.message, reason=verdict.reason)}
+
+    def retrieve(state: State) -> dict:
+        ctx = retrieval.retrieve(state["question"])
+        if ctx.out_of_scope:
+            return {"context": ctx, "answer": Answer(question=state["question"], status="out_of_scope",
+                                                     text=refusals.OUT_OF_SCOPE, reason="out_of_scope")}
+        return {"context": ctx}
+
+    def write(state: State) -> dict:
+        ctx = state["context"]
+        # With nothing to write about, the offline writer already says "not found in sources".
+        # Calling a model would only invite it to invent something, so skip it.
+        if llm is not None and ctx.has_evidence:
+            try:
+                return {"draft": answer_writer.write_with_llm(ctx, llm), "used_llm": True, "fell_back": False}
+            except Exception:  # model offline, rate limited, bad key ... never break the answer
+                return {"draft": answer_writer.write_offline(ctx), "used_llm": False, "fell_back": True}
+        return {"draft": answer_writer.write_offline(ctx), "used_llm": False, "fell_back": False}
+
+    def output_guard(state: State) -> dict:
+        ctx, draft = state["context"], state["draft"]
+        used_llm, fell_back = state["used_llm"], state["fell_back"]
+
+        # How many "not found in sources" statements are justified: one per missing fact or unknown
+        # model, plus any the notes themselves contain. With no facts (a text search) we cannot tell.
+        missing = (sum(1 for f in ctx.facts if f.value is None) + len(ctx.unknown_models)
+                   + sum(n.lower().count(refusals.NOT_FOUND) for n in ctx.notes))
+        # Every product that has evidence must be cited at least once, so a comparison cannot drop a side.
+        needed: dict[str, set[str]] = {}
+        for f in ctx.facts:
+            if f.value is not None:
+                needed.setdefault(f.product_name, set()).update(f.snippet_ids)
+
+        def check(text: str) -> grounding.GroundingReport:
+            return grounding.verify(text, set(ctx.snippets), answer_writer.allowed_text(ctx),
+                                    max_not_found=missing if ctx.facts else None,
+                                    required_any=list(needed.items()))
+
+        report = check(draft)
+        if not report.ok and used_llm:                       # bad LLM draft -> safe writer
+            draft, used_llm, fell_back = answer_writer.write_offline(ctx), False, True
+            report = check(draft)
+        if not report.ok:                                    # should never happen; say so honestly
+            return {"answer": Answer(question=ctx.question, status="not_found", text=refusals.NOT_FOUND.capitalize() + ".",
+                                     reason="grounding_failed: " + "; ".join(report.problems),
+                                     retrieved_ids=list(ctx.snippets))}
+        return {"answer": _finish(ctx, draft, used_llm, fell_back)}
+
+    graph = StateGraph(State)
+    graph.add_node("input_guard", input_guard)
+    graph.add_node("retrieve", retrieve)
+    graph.add_node("write", write)
+    graph.add_node("output_guard", output_guard)
+
+    graph.add_edge(START, "input_guard")
+    # A node that already produced `answer` (a refusal) ends the run; otherwise carry on.
+    graph.add_conditional_edges("input_guard", lambda s: END if "answer" in s else "retrieve")
+    graph.add_conditional_edges("retrieve", lambda s: END if "answer" in s else "write")
+    graph.add_edge("write", "output_guard")
+    graph.add_edge("output_guard", END)
+    return graph.compile()
