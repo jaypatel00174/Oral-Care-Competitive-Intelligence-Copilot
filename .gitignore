@@ -13,3 +13,5 @@ frontend/dist/
 # data/models/
 # data/comparison.db
 .vscode/
+# Local Kiro settings (MCP config holds machine-specific absolute paths)
+.kiro/
