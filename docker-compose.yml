@@ -1,0 +1,67 @@
+# The whole stack: chat API, MCP server and web app.
+#
+#   docker compose up --build -d        # then open http://127.0.0.1:8080
+#   docker compose logs -f api          # follow the API's logs
+#   docker compose down
+#
+# Model settings and the API key are read from .env (copy .env.example). Without .env everything still runs,
+# with the deterministic writer and no model calls.
+#
+# Every port is published on the HOST's 127.0.0.1 only, because the API and the MCP server have no login.
+# To serve other machines, set BIND_ADDRESS=0.0.0.0 ONLY behind something that adds authentication and HTTPS
+# (a reverse proxy or your platform's access control); otherwise anyone who can reach the port can spend your
+# model quota.
+
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: oralcare-backend:latest
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    # A model running on this machine (Ollama) is "localhost" to you but not to a container.
+    # If .env points at http://localhost:11434, use http://host.docker.internal:11434 here instead.
+    LOG_FILE: ""                          # log to stdout/stderr; Docker collects it (docker compose logs)
+  extra_hosts:
+    - "host.docker.internal:host-gateway" # makes host.docker.internal work on Linux too
+  restart: unless-stopped
+  read_only: true                         # the image is never modified at run time ...
+  tmpfs:
+    - /tmp                                # ... except scratch space
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  api:
+    <<: *backend
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000"
+
+  mcp:
+    <<: *backend
+    command: ["python", "-m", "src.mcp_server.server", "--http"]
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${MCP_PORT:-8765}:8765"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8765), 3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  web:
+    build:
+      context: ./frontend
+    image: oralcare-web:latest
+    environment:
+      API_UPSTREAM: http://api:8000
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true

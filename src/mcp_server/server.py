@@ -113,7 +113,10 @@ def main() -> None:
     event(log, logging.INFO, "mcp_start", transport="http" if "--http" in sys.argv else "stdio",
           log_file=os.getenv("LOG_FILE") or None)
     if "--http" in sys.argv:
-        mcp.run("streamable-http", host="127.0.0.1", port=int(os.getenv("MCP_PORT", "8765")))   # local only
+        # Local only by default. A container sets MCP_HOST=0.0.0.0 so the port can be published; who can then
+        # reach it is decided by where the port is published (docker-compose.yml binds it to 127.0.0.1).
+        host = os.getenv("MCP_HOST", "127.0.0.1").strip() or "127.0.0.1"
+        mcp.run("streamable-http", host=host, port=int(os.getenv("MCP_PORT", "8765")))
     else:
         mcp.run("stdio")
 

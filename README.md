@@ -7,6 +7,15 @@ responses.
 
 Built for the Philips Personal Health GenAI case study (Case Study 1).
 The original brief is in [`docs/Philips_PH_GenAI_Case_Studies.docx`](docs/Philips_PH_GenAI_Case_Studies.docx).
+The approach, design choices and limitations are in [`docs/report.md`](docs/report.md). How each part works, and
+what we learned building it: [scraper](docs/scraper/scraping-insights.md),
+[chat assistant](docs/assistant/assistant-insights.md), [agent, tools and MCP](docs/agent/agent-insights.md) and
+[web app](docs/frontend/frontend-insights.md).
+The architecture document is [`docs/architecture/architecture.md`](docs/architecture/architecture.md).
+Architecture diagrams (context, containers, components, deployment, data flow) are in
+[`docs/architecture/architecture.drawio`](docs/architecture/architecture.drawio), with PNG copies alongside it.
+A single-page overview is in [`end-to-end-architecture.drawio`](docs/architecture/end-to-end-architecture.drawio)
+([PNG](docs/architecture/end-to-end-architecture.png)).
 
 ## Project status
 
@@ -25,7 +34,7 @@ The original brief is in [`docs/Philips_PH_GenAI_Case_Studies.docx`](docs/Philip
 | Evaluation suite, 41 questions + 16 retrieval queries + 7 dialogues + LLM judge (`src/evaluation`) | Done |
 | Logging with request ids (`src/common/log.py`) | Done: API, pipeline, model calls, agent, MCP; file and JSON options |
 | Tests (`tests/`) | Done (about 215 tests; none need an LLM, a network or any quota) |
-| `docs/report.md` | Planned |
+| Report: approach, design choices, limitations ([`docs/report.md`](docs/report.md)) | Done |
 
 ## Contents
 
@@ -42,6 +51,7 @@ The original brief is in [`docs/Philips_PH_GenAI_Case_Studies.docx`](docs/Philip
 8. [Run the tests](#8-run-the-tests)
 9. [Logs and debugging](#9-logs-and-debugging)
 10. [Web chat app (React)](#10-web-chat-app-react)
+11. [Run everything in Docker](#11-run-everything-in-docker)
 
 ---
 
@@ -585,6 +595,44 @@ point it at another address, set `API_TARGET=http://host:port npm run dev`. `npm
 > **Quota:** "Use LLM" is on by default. With a hosted model, every question is a model call (about 3 to 4 in Agent
 > mode). Turn it off for demos that should cost nothing.
 
+## 11. Run everything in Docker
+
+Three containers run the whole stack on any machine with Docker. No Python or Node is needed on the machine.
+
+| Container | Image | What it runs | Port (host) |
+|---|---|---|---|
+| `api` | `oralcare-backend` (`Dockerfile`) | the chat API (FastAPI) | `127.0.0.1:8000` |
+| `mcp` | the same image | the MCP server over HTTP (`/mcp`) | `127.0.0.1:8765` |
+| `web` | `oralcare-web` (`frontend/Dockerfile`) | the React app on nginx, which forwards `/api/*` to `api` | `127.0.0.1:8080` |
+
+```bash
+cp .env.example .env                 # optional: your model and key (without it: no model calls)
+docker compose up --build -d         # first build takes a few minutes
+open http://127.0.0.1:8080           # the web app
+docker compose logs -f api           # logs
+docker compose down                  # stop
+```
+
+- **Self-contained backend image.** The database and search index are rebuilt **at build time** from the product data
+  and the embedding model in the repository. The image needs no internet and no volume at run time (only to reach a
+  hosted model), and every container starts with the same data.
+- **No secrets in images.** `.env` is excluded from the build context and only passed at run time (`env_file`).
+- **Hardened by default.** Both images run as a non-root user. The backend's filesystem is read-only, and every
+  container has a health check.
+- **Ports.** Change them with `API_PORT`, `MCP_PORT` and `WEB_PORT`, for example `WEB_PORT=9000 docker compose up -d`.
+- **A model on this machine (Ollama)** is not `localhost` from inside a container. In `.env`, use
+  `LLM_BASE_URL=http://host.docker.internal:11434/v1`. This works on Linux too, through `extra_hosts`.
+- **One image at a time:** `docker build -t oralcare-backend .` and `docker build -t oralcare-web frontend`. Each
+  Dockerfile's header shows its `docker run` commands, including the MCP server over stdio
+  (`docker run --rm -i oralcare-backend python -m src.mcp_server.server`).
+- **Deploying elsewhere.** Push the two images to a registry, and run them with the same environment variables. In
+  the web container, set `API_UPSTREAM` to wherever the API is reachable.
+
+> **Security:** the API and the MCP server have **no login**. That is why every port is published on the host's
+> `127.0.0.1` only. Setting `BIND_ADDRESS=0.0.0.0` exposes them to your network: do that only behind something
+> that adds authentication and HTTPS (a reverse proxy, or your platform's access control). Otherwise anyone who can
+> reach the port can use the assistant and spend your model quota.
+
 ---
 
 ## Querying the data yourself
@@ -617,32 +665,45 @@ Both print a report and write no files. See the header of each script for the se
 
 ## How it works
 
-```
- Philips & Oral-B public pages
-        |  src/scraping   download politely, then parse each page
-        v
-   Product + Snippet objects
-        |  src/pipeline   merge both brands, tidy values
-        v
- comparison_table.csv / products.json / snippets.jsonl
-        |  src/pipeline/build_stores.py  -> src/storage
-        v
- SQLite (exact facts)  +  Chroma (search by meaning)
-        |
-        +--> src/services/retrieval.py --> LLM writer (or code writer) --> output guard     the pipeline (LangGraph)
-        |        input guard first;  conversation.py adds follow-up memory
-        |
-        +--> src/services/tools.py  (read-only tools: compare, rank, search, evidence, check ...)
-                  |--> src/services/agent.py   the LLM picks the tools, same guards (optional)
-                  `--> src/mcp_server          any MCP client
-        v
-   grounded, cited answers  --->  CLI | FastAPI (/chat, /chat/stream) | MCP clients
-        |
-        v
-   src/evaluation   questions, ground truth, retrieval recall, dialogues, LLM judge
+```mermaid
+flowchart TD
+    sites["Philips & Oral-B public pages"]
+    objs["Product + Snippet objects"]
+    files[("comparison_table.csv · products.json · snippets.jsonl")]
+    stores[("SQLite (exact facts) + Chroma (search by meaning)")]
+    conv["src/services/conversation.py<br/>follow-up memory"]
+    v1["v1 pipeline (LangGraph)<br/>input guard → retrieval.py → LLM writer (or code writer) → output guard"]
+    tools["src/services/tools.py<br/>read-only tools: compare, rank, search, evidence, check ..."]
+    agent["src/services/agent.py<br/>v2 agent: the LLM picks the tools, same guards (optional)"]
+    mcp["src/mcp_server<br/>any MCP client"]
+    ans["Grounded, cited answers"]
+    out["CLI · FastAPI (/chat, /chat/stream) · React app · MCP clients"]
+    evalx["src/evaluation<br/>questions, ground truth, retrieval recall, dialogues, LLM judge"]
+
+    sites -->|"src/scraping: download politely, then parse each page"| objs
+    objs -->|"src/pipeline: merge both brands, tidy values"| files
+    files -->|"build_stores.py → src/storage"| stores
+    stores --> v1
+    stores --> tools
+    conv --> v1
+    conv --> agent
+    tools --> agent
+    tools --> mcp
+    v1 --> ans
+    agent --> ans
+    mcp --> out
+    ans --> out
+    out -.->|measured by| evalx
 ```
 
+The same system as a full diagram: [`docs/architecture/end-to-end-architecture.png`](docs/architecture/end-to-end-architecture.png),
+with the architecture document in [`docs/architecture/architecture.md`](docs/architecture/architecture.md).
+
 Scraper compliance notes: [`docs/scraper/robots-txt-check.md`](docs/scraper/robots-txt-check.md).
+Component notes: [`docs/scraper/scraping-insights.md`](docs/scraper/scraping-insights.md),
+[`docs/assistant/assistant-insights.md`](docs/assistant/assistant-insights.md),
+[`docs/agent/agent-insights.md`](docs/agent/agent-insights.md),
+[`docs/frontend/frontend-insights.md`](docs/frontend/frontend-insights.md).
 
 ### Folder guide
 
@@ -659,7 +720,7 @@ Scraper compliance notes: [`docs/scraper/robots-txt-check.md`](docs/scraper/robo
 | `src/evaluation` | `run_eval.py` runs the test questions and writes a report (it asks before using a hosted model); `truth.py`, `retrieval_eval.py` and `judge.py` are the checks; `conversation_eval.py` checks multi-turn memory offline. | Only if you configure a hosted LLM |
 | `tests/` | pytest tests (none need an LLM). | No |
 | `scripts/` | One-command helpers (`build_data.ps1` / `build_data.sh`). | Via pipeline |
-| `docs/` | Case study, architecture, report. | No |
+| `docs/` | Case study, report, and how-it-works notes for the scraper, assistant, agent and web app. | No |
 
 ## The data model in two ideas
 

@@ -238,13 +238,24 @@ def create_app(sessions: SessionStore | None = None) -> FastAPI:
 app = create_app()
 
 
+def bind_host() -> str:
+    """Where the server listens. Local only (127.0.0.1) unless HOST says otherwise.
+
+    A container must listen on all of its interfaces (HOST=0.0.0.0, set in the Dockerfile) so its port can be
+    published at all. Who can then reach it is decided by where the port is published: docker-compose.yml publishes
+    it on the host's 127.0.0.1 only. Publishing it wider exposes an API that has no login.
+    """
+    return os.getenv("HOST", "127.0.0.1").strip() or "127.0.0.1"
+
+
 def main() -> None:
     import uvicorn
 
     setup_logging("INFO")
-    event(log, logging.INFO, "api_start", host="127.0.0.1", port=int(os.getenv("PORT", "8000")),
+    host, port = bind_host(), int(os.getenv("PORT", "8000"))
+    event(log, logging.INFO, "api_start", host=host, port=port,
           log_level=logging.getLevelName(logging.getLogger("oralcare").level), log_file=os.getenv("LOG_FILE") or None)
-    uvicorn.run("src.app.api:app", host="127.0.0.1", port=int(os.getenv("PORT", "8000")))
+    uvicorn.run("src.app.api:app", host=host, port=port)
 
 
 if __name__ == "__main__":

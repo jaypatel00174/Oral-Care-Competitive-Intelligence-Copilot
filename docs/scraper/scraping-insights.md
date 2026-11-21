@@ -7,11 +7,17 @@ the compliance check is in [`robots-txt-check.md`](robots-txt-check.md).
 
 ## 1. How we scrape (end to end)
 
+```mermaid
+flowchart LR
+    list["Listing pages<br/>2 sites"] --> urls["Product URLs<br/>philips.py · oralb.py"]
+    urls --> dl["Download, cached<br/>fetcher.py<br/>robots.txt · 2 s/host"]
+    dl --> parse["Parse<br/>philips.py · oralb.py"]
+    parse --> objs["Product + Snippets<br/>schema.py"]
+    objs --> files[("Files<br/>pipeline/build_dataset.py")]
 ```
-Listing pages ──► product URLs ──► download (cached) ──► parse ──► Product + Snippets ──► files
-  (2 sites)       philips.py /       fetcher.py            philips.py /     schema.py        pipeline/
-                  oralb.py                                 oralb.py                          build_dataset.py
-```
+
+Where this sits in the whole system: the offline pipeline in the
+[end-to-end architecture](../architecture/end-to-end-architecture.png).
 
 1. **Find product URLs.** `product_urls()` reads each brand's listing pages and
    returns the product page links.

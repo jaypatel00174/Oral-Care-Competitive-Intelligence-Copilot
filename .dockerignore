@@ -1,0 +1,29 @@
+# Keep secrets, local environments and generated files out of the build context.
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+.venv
+.vscode
+.pytest_cache
+**/__pycache__
+**/*.pyc
+.DS_Store
+logs
+*.log
+
+# Rebuilt inside the image from products.json + snippets.jsonl
+data/chroma
+data/comparison.db
+# Not needed at run time (only for re-scraping)
+data/raw
+
+# Evaluation outputs (the comparison table itself is copied explicitly)
+outputs/eval_*
+
+# The frontend has its own image and build context
+frontend/node_modules
+frontend/dist
+
+docs/~$*

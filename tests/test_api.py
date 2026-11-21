@@ -124,9 +124,17 @@ def test_unexpected_errors_do_not_leak_details(monkeypatch):
     assert r.status_code == 500 and "secret" not in r.text and "/Users" not in r.text
 
 
-def test_the_server_binds_to_localhost_only():
+def test_the_server_binds_to_localhost_only_unless_told_otherwise(monkeypatch):
+    from src.app.api import bind_host
+
+    monkeypatch.delenv("HOST", raising=False)
+    assert bind_host() == "127.0.0.1"                 # the default never exposes the API
+    monkeypatch.setenv("HOST", "  ")
+    assert bind_host() == "127.0.0.1"                 # an empty setting is not "all interfaces"
+    monkeypatch.setenv("HOST", "0.0.0.0")
+    assert bind_host() == "0.0.0.0"                   # only an explicit setting, as in the Docker image
     src = open("src/app/api.py", encoding="utf-8").read()
-    assert 'host="127.0.0.1"' in src and "0.0.0.0" not in src
+    assert 'uvicorn.run("src.app.api:app", host=host' in src
 
 
 def test_agent_stream_shows_each_tool_call_and_its_result(client, monkeypatch):
