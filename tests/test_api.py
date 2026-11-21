@@ -127,3 +127,33 @@ def test_unexpected_errors_do_not_leak_details(monkeypatch):
 def test_the_server_binds_to_localhost_only():
     src = open("src/app/api.py", encoding="utf-8").read()
     assert 'host="127.0.0.1"' in src and "0.0.0.0" not in src
+
+
+def test_agent_stream_shows_each_tool_call_and_its_result(client, monkeypatch):
+    """The web app shows the agent's calls live: the stream must carry tool and tool_result events, in order."""
+    from langchain_core.messages import AIMessage
+
+    class Scripted:
+        def __init__(self):
+            self.replies = [
+                AIMessage(content="", tool_calls=[{"name": "compare_products", "id": "c1", "type": "tool_call",
+                                                   "args": {"product_ids": ["PH-HX9903_15"], "attributes": ["timer"]}}]),
+                AIMessage(content="BrushPacer and SmartTimer [PH-HX9903_15#019]."),
+            ]
+
+        def bind_tools(self, _tools):
+            return self
+
+        def invoke(self, _messages):
+            return self.replies.pop(0)
+
+    monkeypatch.setattr("src.services.assistant.get_llm", lambda: Scripted())      # no real model
+    with client.stream("POST", "/chat/stream", json={"question": "What is the timer on the Sonicare 9300?",
+                                                       "mode": "agent", "use_llm": True}) as r:
+        events = sse("".join(r.iter_text()))
+    names = [n for n, _ in events]
+    assert names.index("tool") < names.index("tool_result") < names.index("answer")
+    result = dict(events)["tool_result"]
+    assert result["name"] == "compare_products" and result["ok"] is True and "value(s) found" in result["summary"]
+    answer = dict(events)["answer"]["answer"]
+    assert answer["used_llm"] and answer["text"].endswith("[1].")

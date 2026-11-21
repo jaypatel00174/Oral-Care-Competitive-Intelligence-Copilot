@@ -333,3 +333,27 @@ def test_model_numbers_in_names_are_not_mistaken_for_claims():
     model = Scripted(tool_call("compare_products", {"product_ids": ["OB-io2"], "attributes": ["price_usd"]}),
                      AIMessage(content="The Oral-B iO Series 2 costs $64.99 [OB-io2#000]."))
     assert run_agent("What does the iO2 cost?", model).used_llm
+
+
+# ---- what the stream tells people watching the agent -------------------------------------------------------------
+def test_each_tool_call_is_followed_by_a_short_result_event():
+    model = Scripted(tool_call("resolve_models", {"text": "iO10 and Sonicare 9300"}),
+                     tool_call("compare_products", {"product_ids": [NINE_THREE], "attributes": ["timer", "claims"]}, "c2"),
+                     tool_call("compare_products", {"product_ids": ["nope"]}, "c3"),
+                     AIMessage(content="BrushPacer and SmartTimer [PH-HX9903_15#019]."))
+    events = list(agent_events("What is the timer on the Sonicare 9300?", model))
+    pairs = [(e["event"], e.get("name")) for e in events if e["event"] in ("tool", "tool_result")]
+    assert pairs == [("tool", "resolve_models"), ("tool_result", "resolve_models"),
+                     ("tool", "compare_products"), ("tool_result", "compare_products"),
+                     ("tool", "compare_products"), ("tool_result", "compare_products")]
+    results = [e for e in events if e["event"] == "tool_result"]
+    assert "Sonicare DiamondClean Smart 9300" in results[0]["summary"] and "iO10" in results[0]["summary"]
+    assert results[1]["ok"] and "value(s) found" in results[1]["summary"]
+    assert not results[2]["ok"] and results[2]["summary"].startswith("error:")
+
+
+def test_rank_result_summary_names_the_winner():
+    from src.services.agent import summarize_result
+
+    r = tools.rank_products("price_usd", "asc", "Oral-B", ["pressure_sensor"], 3)
+    assert summarize_result("rank_products", r, {}).startswith("#1 Oral-B iO Series 2") and "$64.99" in summarize_result("rank_products", r, {})

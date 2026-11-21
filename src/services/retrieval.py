@@ -134,6 +134,11 @@ def _product_aliases(p: dict) -> list[str]:
 def resolve_products(question: str, products: list[dict]) -> list[dict]:
     """Products the question names. Some names match two products (e.g. '6500'): both are returned."""
     q = question.lower()
+    # A SKU in the question ("Sonicare 6500 (HX7413/07)") names exactly one variant: use it.
+    by_sku = [p for p in products if p.get("sku") and len(str(p["sku"]).strip("'")) >= 6
+              and str(p["sku"]).strip("'").lower() in q]
+    if by_sku:
+        return by_sku
     return [p for p in products if any(re.search(a, q) for a in _product_aliases(p))]
 
 

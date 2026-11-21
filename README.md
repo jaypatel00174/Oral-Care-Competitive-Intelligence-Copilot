@@ -19,6 +19,7 @@ The original brief is in [`docs/Philips_PH_GenAI_Case_Studies.docx`](docs/Philip
 | Multi-turn memory: follow-ups like "and its price?" (`src/services/conversation.py`) | Done: rule-based, offline, 19 scripted turns checked |
 | CLI (`src/app/cli.py`) | Done, interactive chat with memory |
 | FastAPI backend with streaming (`src/app/api.py`) | Done: `/chat`, `/chat/stream`, sessions, products, compare. Local only |
+| Web chat app (`frontend/`, React + Vite + TypeScript) | Done: streaming chat, live trace, numbered sources, follow-ups, pipeline/agent toggle |
 | Read-only tool layer (`src/services/tools.py`) and MCP server (`src/mcp_server`) | Done: 10 tools, 2 resources, 1 prompt; stdio and local HTTP |
 | Agent mode: the LLM chooses tools, with the same guards (`src/services/agent.py`) | Done, optional; tested with scripted models only |
 | Evaluation suite, 41 questions + 16 retrieval queries + 7 dialogues + LLM judge (`src/evaluation`) | Done |
@@ -40,6 +41,7 @@ The original brief is in [`docs/Philips_PH_GenAI_Case_Studies.docx`](docs/Philip
 7. [Run the evaluation](#7-run-the-evaluation)
 8. [Run the tests](#8-run-the-tests)
 9. [Logs and debugging](#9-logs-and-debugging)
+10. [Web chat app (React)](#10-web-chat-app-react)
 
 ---
 
@@ -550,6 +552,38 @@ for the exact lines a request caused: `grep 7bd9ad6b logs/assistant.log`.
 
 **What is never logged:** API keys, answer text and snippet text. The question text, tool argument values and tool
 error text can hold your words, so they appear **only at DEBUG**.
+
+## 10. Web chat app (React)
+
+A browser chat UI in `frontend/` (React 19, Vite, TypeScript; no UI library). It talks to the API from section 5.
+
+**What it shows:**
+- **Streaming answers.** A live trace ticks each step as it happens: safety check, retrieve facts, write answer, verify
+  citations. In agent mode it also shows each tool the model calls.
+- **Clickable citations.** Every `[1]` badge opens that source: the page, its sections, and the exact snippet text
+  the claim was checked against.
+- **Status and writer.** Each answer says whether it was answered, not found or refused, and whether the LLM, the
+  agent or the safe writer wrote it. When the safe writer answered, it shows why.
+- **Follow-ups.** "and its price?" works, and the app shows how the follow-up was understood.
+- **Controls.** Pipeline / Agent switch, "Use LLM" switch (off = no model calls, no quota), New chat, Stop.
+- **Health.** The header shows the API status, the product count and the configured model and provider.
+- **Saved chat.** The chat survives a page reload.
+
+Needs **Node.js 20.19+ or 22.12+** (`node -v`; on macOS `brew install node`). Then, with the API running:
+
+```bash
+python -m src.app.api              # terminal 1: the API on http://127.0.0.1:8000
+cd frontend
+npm install                        # once
+npm run dev                        # terminal 2: open http://127.0.0.1:5173
+```
+
+The dev server forwards `/api/*` to `http://127.0.0.1:8000`, so the API needs no CORS settings and stays local. To
+point it at another address, set `API_TARGET=http://host:port npm run dev`. `npm run build` type-checks and builds
+`frontend/dist/`, and `npm run preview` serves that build with the same forwarding.
+
+> **Quota:** "Use LLM" is on by default. With a hosted model, every question is a model call (about 3 to 4 in Agent
+> mode). Turn it off for demos that should cost nothing.
 
 ---
 

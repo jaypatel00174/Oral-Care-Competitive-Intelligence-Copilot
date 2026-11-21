@@ -109,7 +109,8 @@ def list_products(brand: str | None = None) -> dict:
         products = _products(db)
     names = retrieval.product_labels(products)
     rows = [{"product_id": p["product_id"], "name": names[p["product_id"]], "brand": p["brand"], "sku": p["sku"],
-             "series": p["series"], "price_usd": p["price_usd"]} for p in products if brand in (None, p["brand"])]
+             "series": p["series"], "price_usd": p["price_usd"], "source_url": p["source_url"]}
+            for p in products if brand in (None, p["brand"])]
     return {"count": len(rows), "products": rows,
             "note": "price_usd null means the price is not found in sources."}
 

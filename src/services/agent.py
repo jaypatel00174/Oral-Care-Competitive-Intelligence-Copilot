@@ -246,6 +246,39 @@ def _fit(text: str, limit: int) -> str:
     return "\n".join(kept + [f"NOTE: {dropped} more line(s) were cut. Ask for fewer attributes or products."])
 
 
+def summarize_result(name: str, result: dict, names: dict[str, str]) -> str:
+    """One short line about what a tool returned, for people watching the agent work (the stream's tool_result)."""
+    if "error" in result:
+        return f"error: {_trim(result['error'], 140)}"
+    if name == "resolve_models":
+        found = [p["name"] for p in result.get("products", [])]
+        unknown = result.get("unknown_models") or []
+        parts = [f"found {', '.join(_trim(n, 60) for n in found)}" if found else "no known product named"]
+        if unknown:
+            parts.append(f"not in the data: {', '.join(unknown)}")
+        return "; ".join(parts)
+    if name in ("compare_products", "get_evidence"):
+        facts = result.get("facts") or ([result["fact"]] if result.get("fact") else [])
+        missing = sum(1 for f in facts if f.get("value") is None)
+        text = f"{len(facts) - missing} value(s) found, {missing} not found in sources"
+        if result.get("skipped_products"):
+            text += f"; {len(result['skipped_products'])} product(s) left out (limit {tools.MAX_PRODUCTS})"
+        return text
+    if name == "rank_products":
+        ranking = result.get("ranking") or []
+        if not ranking:
+            return f"no product qualifies ({result.get('considered', 0)} considered)"
+        top = ranking[0]
+        value = top.get("price_usd", top.get("mode_count"))
+        value = f"${value:.2f}" if isinstance(value, float) and "price_usd" in top else value
+        return f"#1 {_trim(top['product'], 60)} ({value}) of {result.get('considered', 0)} considered"
+    if name == "search_pages":
+        return f"{result.get('count', 0)} matching page snippet(s)"
+    if name == "list_products":
+        return f"{result.get('count', 0)} product(s)"
+    return "done"
+
+
 def _short(args: dict) -> str:
     text = json.dumps(args, ensure_ascii=False, sort_keys=True)
     return text if len(text) <= 160 else text[:157] + "..."
@@ -360,6 +393,8 @@ def agent_events(question: str, llm) -> Iterator[dict]:
                       detail=f"args={_short(args)}" + (f" error={result['error']}" if "error" in result else ""))
                 evidence.append(body)
                 messages.append(ToolMessage(content=body, tool_call_id=call["id"], name=name))
+                yield {"event": "tool_result", "name": name, "ok": "error" not in result,
+                       "summary": summarize_result(name, result, names)}
             for call in requested[MAX_TOOLS_PER_TURN:]:           # every tool call needs an answer, even a refused one
                 messages.append(ToolMessage(content=json.dumps({"error": "too many tool calls in one turn"}),
                                             tool_call_id=call["id"], name=call["name"]))

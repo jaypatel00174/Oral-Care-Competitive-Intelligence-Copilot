@@ -295,3 +295,10 @@ def test_what_comes_with_a_product_is_not_mistaken_for_an_item():
     assert retrieval.asked_items("What comes with the iO9?", [dict(p) for p in sql_store.list_products(sql_store.connect())]) == []
     a = offline("What comes with the iO9?")
     assert a.status == "answered" and "not found in sources" not in a.text
+
+
+def test_a_sku_in_the_question_picks_exactly_that_variant():
+    a = offline("Tell me about the Sonicare Series 6500 Rechargeable toothbrush (HX7413/07)")
+    assert {c.product_id for c in a.citations} == {"PH-HX7413_07"}
+    both = offline("What is the timer on the Sonicare 6500?")                 # no SKU: still both variants
+    assert {c.product_id for c in both.citations} == {"PH-HX7413_07", "PH-HX7412_05"}
