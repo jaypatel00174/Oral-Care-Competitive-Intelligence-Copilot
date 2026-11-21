@@ -20,7 +20,7 @@ The original brief is in [`docs/Philips_PH_GenAI_Case_Studies.docx`](docs/Philip
 | CLI (`src/app/cli.py`) | Done |
 | FastAPI backend (`src/app`) | Planned |
 | MCP tool layer, bonus (`src/mcp_server`) | Planned |
-| Evaluation suite, 15+ questions (`src/evaluation`) | Planned |
+| Evaluation suite, 39 questions + 16 retrieval queries + LLM judge (`src/evaluation`) | Done |
 | `docs/report.md` | Planned |
 
 ## Quick start
@@ -91,6 +91,36 @@ ollama pull qwen2.5:7b                # about 4.7 GB
 ```
 
 On a CPU a typical answer takes about 10 seconds (up to about 30 for long ones).
+
+## Evaluation
+
+```powershell
+python -m src.evaluation.run_eval                   # default: both writer modes + retrieval + LLM judge
+python -m src.evaluation.run_eval --mode llm        # LLM from .env, with safe-writer fallback
+python -m src.evaluation.run_eval --mode fallback   # safe writer only, deterministic, no LLM needed
+python -m src.evaluation.run_eval --repeats 3       # repeat the LLM mode (its output varies run to run)
+python -m src.evaluation.run_eval --no-judge --no-retrieval
+```
+
+By default the suite runs the assistant twice: with the LLM (falling back to the safe writer when a
+draft fails the checks) and with the safe writer only. The report (`outputs/eval_report.md`, plus
+`outputs/eval_results.json`) has one section per mode. If no LLM is reachable, that section says so.
+
+What is checked:
+
+| Check | Where | What it catches |
+|---|---|---|
+| St| St| St| St| St| St| St| `| St| St| Ston| St| St| St| St| St| St| St| `t s| St| St| St| St| St|  when| St| St| St| St| St| St| St| `| St| ry ans| St| St| St| St| Stio| St| St| Stt | St| St| St| St| St| St| St| `| St| St| Ston| St| St| St| St| St| St| St| `t s| St| St| St| St| St|  w l| St| St| St| St| St| St| St| `| St| St| Ston| St| St| St| St| St| St| St| `t s| St| St| St| sv| St| St| St| St| St| St| St| `| St| St| Ston| St| St| St| St| St| St| St| `t s| St| St| St| St| St| | St| St| St| St| St| St| St| `| St| St| Ston| St| St| St| St| St| St| St| `t s| St| St| St| St| St|  wch alone (top 5) |
+| LLM judge | `judge.py` | invented features or swapped products in plain wording. The judge is calibrated on 3 fixed examples first. It is **advisory** by default (reported, never fails the run) because a small model grading its own writing is noisy. It becomes a gate when `JUDGE_MODEL` names a different model, or with `--judge-gate`. |
+| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| R| |
+
+QQQQQQQQQQQQQQQQor QQQQQQQQQQQQQQQQor QQQQQQQQQQQQQQQs QQQQQQQQQQQQte 90%, retrieval recall 85%) set the
+exit code, so it can run in CI. A case can carry `"known_gap": "reason"`: it is reported in every run
+but not counted in the gates, and the report tells you when it starts passing so you can remove the flag.
+`N03` is one today: "does the 9300 come with a UV sanitizer" lists the box contents instead of saying the
+item is not found.
+
+To add a test, append an object to `questions.json` (or `retrieval_questions.json`).
 
 ## Querying the data yourself
 

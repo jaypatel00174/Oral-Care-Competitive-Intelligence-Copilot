@@ -16,7 +16,7 @@ from src.services.retrieval import Context, Fact
 
 _STRAY_TAG_RE = re.compile(r"\s*\[(?:EVIDENCE|FACTS|PAGE TEXT|NOTE|NOT FOUND)\]", re.I)
 
-MAX_CITES_PER_LINE = 3        # a line cites at most this many ids, to stay readable
+MAX_CITES_PER_LINE = 5        # no fact has more than 5 evidence snippets; a lower cap left some modes uncited
 MAX_TEXT_CHARS = 400          # evidence quoted to the LLM is trimmed to this length
 
 SYSTEM_PROMPT = f"""You write short, factual answers about Philips Sonicare and Oral-B electric toothbrushes.

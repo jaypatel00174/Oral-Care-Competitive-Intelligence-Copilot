@@ -1,0 +1,18 @@
+[
+  {"id": "R01", "query": "Does the Sonicare Prestige 9900 come with a travel case?", "expect_products": ["PH-HX9990_12"], "snippet_contains": "travel case"},
+  {"id": "R02", "query": "Which Sonicare automatically adjusts brushing based on pressure and motion?", "expect_products": ["PH-HX9990_12"], "snippet_contains": "SenseIQ"},
+  {"id": "R03", "query": "Sonicare 4100 pressure sensor alerts when brushing too hard", "expect_products": ["PH-HX3681_26"], "snippet_contains": "pressure sensor"},
+  {"id": "R04", "query": "kids toothbrush with reusable stickers to decorate", "expect_products": ["PH-HX3601_01"], "snippet_contains": "stickers"},
+  {"id": "R05", "query": "battery powered travel toothbrush from Philips One", "expect_products": ["PH-HY1100_02", "PH-HY1200_27"], "snippet_contains": "travel"},
+  {"id": "R06", "query": "replacement reminder that tells me when to change the brush head", "expect_products": ["PH-HX9990_12", "PH-HX3681_26", "PH-HX9903_15", "PH-HX7422_03"], "snippet_contains": "replace"},
+  {"id": "R07", "query": "Which Sonicare works with Android phones and iPhone via Bluetooth?", "expect_products": ["PH-HX9990_12", "PH-HX9903_15", "PH-HX7422_03", "PH-HX7413_07", "PH-HX7412_05"], "snippet_contains": "Bluetooth"},
+  {"id": "R08", "query": "Oral-B iO9 3D teeth tracking maps each tooth in real time", "expect_products": ["OB-io9-genius"], "snippet_contains": "3D Teeth Tracking"},
+  {"id": "R09", "query": "Oral-B iO9 smart visible pressure sensor protects gums and enamel", "expect_products": ["OB-io9-genius"], "snippet_contains": "pressure sensor"},
+  {"id": "R10", "query": "Oral-B toothbrush where one charge lasts 4 weeks", "expect_products": ["OB-io2"], "snippet_contains": "4 weeks"},
+  {"id": "R11", "query": "Oral-B iO Series 8 twin pack price", "expect_products": ["OB-io8-twin"], "snippet_contains": "Price"},
+  {"id": "R12", "query": "Oral-B iO4 gum care brushing mode", "expect_products": ["OB-io4"], "snippet_contains": "gum"},
+  {"id": "R13", "query": "Sonicare 9300 warranty", "expect_products": ["PH-HX9903_15"], "snippet_contains": "warranty"},
+  {"id": "R14", "query": "Oral-B iO6 timer alerts every 30 seconds", "expect_products": ["OB-io6"], "snippet_contains": "30 seconds"},
+  {"id": "R15", "query": "Sonicare 5000 SmarTimer and QuadPacer", "expect_products": ["PH-HX4042_81"], "snippet_contains": "QuadPacer"},
+  {"id": "R16", "query": "Sonicare For Kids free app", "expect_products": ["PH-HX3601_01"], "snippet_contains": "app"}
+]
