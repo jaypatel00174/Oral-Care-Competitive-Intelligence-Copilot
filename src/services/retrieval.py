@@ -93,6 +93,9 @@ class Context:
     notes: list[str] = field(default_factory=list)                # caveats to show with the answer
     unknown_models: list[str] = field(default_factory=list)       # e.g. "iO10": asked about, not in our data
     out_of_scope: bool = False
+    # SKU -> product label, for products that share a name (the two Series 6500 variants). An answer
+    # must state each SKU, otherwise the reader cannot tell which variant a value belongs to.
+    must_name: dict[str, str] = field(default_factory=dict)
 
     @property
     def has_evidence(self) -> bool:
@@ -144,6 +147,40 @@ def find_unknown_models(question: str, products: list[dict]) -> list[str]:
         unknown += [f"Sonicare {n}" for n in re.findall(r"\b(\d{4})\b", q)
                     if n not in known_ph and not 1990 <= int(n) <= 2035]
     return list(dict.fromkeys(unknown))
+
+
+# ------------------------------------------------------------------ "does it come with X?"
+# The word "come with" only says the user is asking about the box. What matters is WHAT they ask
+# for: if that item appears nowhere on the product's pages, the honest answer is "not found in
+# sources", not a list of other things that are in the box.
+_ITEM_WITH = re.compile(r"\b(?:comes?|ships?)\s+with\s+(?P<item>[^?.!]+)", re.I)
+_ITEM_INCLUDE = re.compile(r"\bincludes?\s+(?P<item>[^?.!]+)", re.I)
+_ITEM_SPLIT = re.compile(r"\s+(?:and|or)\s+|,|&|\+", re.I)
+_ITEM_FILLER = {"a", "an", "the", "any", "some", "it", "this", "that", "them", "in", "box", "with", "also", "free",
+                "extra", "everything", "accessories", "accessory", "items", "item", "what", "anything", "other",
+                "inside", "included", "come", "comes", "does", "do", "is", "are", "of", "to", "its", "an"}
+
+
+def asked_items(question: str, products: list[dict]) -> list[str]:
+    """Things the user asks the product to come with, e.g. 'a travel case and a UV sanitizer' ->
+    ['travel case', 'uv sanitizer']. Empty when the question names no specific item."""
+    m = _ITEM_WITH.search(question) or _ITEM_INCLUDE.search(question)
+    if not m:
+        return []
+    items = []
+    for part in _ITEM_SPLIT.split(m.group("item")):
+        if resolve_products(part, products):          # "what comes with the iO9" names a product, not an item
+            continue
+        words = [w for w in re.findall(r"[a-z0-9][a-z0-9+\-]*", part.lower()) if w not in _ITEM_FILLER]
+        if words:
+            items.append(" ".join(words))
+    return list(dict.fromkeys(items))
+
+
+def _item_on_pages(db, product_id: str, item: str) -> bool:
+    """True if every word of `item` appears (singular or plural) in the product's page text."""
+    text = " ".join(r["text"] for r in db.execute("SELECT text FROM snippets WHERE product_id = ?", (product_id,))).lower()
+    return all(re.search(rf"\b{re.escape(w)}s?\b", text) for w in item.split())
 
 
 # ------------------------------------------------------------------ reading values from SQLite
@@ -270,6 +307,24 @@ def _retrieve(question: str, db, search) -> Context:
                 ctx.snippets[row["snippet_id"]] = _citation(row, names)
             ctx.facts.append(Fact(p["product_id"], names[p["product_id"]], attr, LABELS.get(attr, attr),
                                   value, [r["snippet_id"] for r in rows]))
+
+    # An item the user asks for that is on none of the product's pages is "not found in sources".
+    # If every asked item is missing, the unrelated box contents are dropped so they cannot pass for an answer.
+    items = asked_items(question, products) if named else []
+    if items and ctx.facts:
+        for p in named:
+            absent = [i for i in items if not _item_on_pages(db, p["product_id"], i)]
+            if not absent:
+                continue
+            if len(absent) == len(items):
+                ctx.facts = [f for f in ctx.facts if not (f.product_id == p["product_id"] and f.attribute == "included_items")]
+            ctx.facts += [Fact(p["product_id"], names[p["product_id"]], f"included_item:{i}", f"Included item ({i})", None)
+                          for i in absent]
+
+    # Products that share a name must be told apart by SKU in the answer.
+    shown = {f.product_id for f in ctx.facts if f.value is not None}
+    ctx.must_name = {p["sku"]: names[p["product_id"]] for p in products
+                     if p["product_id"] in shown and names[p["product_id"]] != p["name"] and p["sku"]}
 
     # ---- 3. SEARCH path ----------------------------------------------------------------
     if not ctx.facts or (descriptive and attrs):

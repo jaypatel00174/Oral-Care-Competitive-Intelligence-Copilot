@@ -272,25 +272,26 @@
     "llm": {
       "label": "LLM with safe-writer fallback",
       "summary": {
-        "total": 38,
-        "passed": 36,
+        "total": 41,
+        "passed": 41,
         "repeats": 1,
         "pass_rate_per_repeat": [
-          0.9473684210526315
+          1.0
         ],
         "metrics": {
-          "pass_rate": 0.9473684210526315,
+          "pass_rate": 1.0,
           "grounding_rate": 1.0,
           "citation_validity": 1.0,
           "correctness_rate": 1.0,
           "refusal_accuracy": 1.0,
           "not_found_accuracy": 1.0,
           "retrieval_hit_rate": 1.0,
-          "judge_faithfulness": 0.75
+          "llm_call_success": 1.0,
+          "judge_faithfulness": 0.8846153846153846
         },
         "gates": {
           "pass_rate": {
-            "value": 0.9473684210526315,
+            "value": 1.0,
             "minimum": 0.9,
             "passed": true
           },
@@ -323,28 +324,33 @@
             "value": 1.0,
             "minimum": 0.9,
             "passed": true
+          },
+          "llm_call_success": {
+            "value": 1.0,
+            "minimum": 0.95,
+            "passed": true
           }
         },
         "all_gates_passed": true,
-        "llm_used_in": 23,
-        "llm_fell_back_in": 1,
+        "llm_used_in": 26,
+        "llm_fell_back_in": 0,
+        "llm_repaired_in": 3,
+        "llm_errors": 0,
+        "llm_error_sample": null,
         "known_gaps": {
-          "cases": [
-            "N03"
-          ],
-          "still_failing": [
-            "N03"
-          ],
+          "cases": [],
+          "still_failing": [],
           "unexpectedly_passing": []
         },
         "judge": {
-          "judged": 24,
+          "judged": 26,
           "errors": 0,
-          "reliable": false
+          "reliable": false,
+          "error_sample": null
         },
-        "avg_seconds": 2.5334545963682773,
-        "p50_seconds": 1.5584481659971061,
-        "p95_seconds": 10.474745416002406
+        "avg_seconds": 2.945834476683536,
+        "p50_seconds": 4.487500041999738,
+        "p95_seconds": 4.905084041994996
       },
       "cases": [
         {
@@ -362,9 +368,10 @@
             "contains": true,
             "retrieval": true
           },
-          "seconds": 1.2968537080014357,
+          "seconds": 4.8201866249874,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io9-genius#003"
           ],
@@ -373,7 +380,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q02",
@@ -390,9 +398,10 @@
             "contains": true,
             "retrieval": true
           },
-          "seconds": 1.5584481659971061,
+          "seconds": 4.564631166998879,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#019"
           ],
@@ -401,7 +410,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q03",
@@ -418,9 +428,10 @@
             "contains": true,
             "retrieval": true
           },
-          "seconds": 1.4675113330013119,
+          "seconds": 4.738115457992535,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#006"
           ],
@@ -429,7 +440,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q04",
@@ -446,21 +458,21 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 2.9374604999975418,
+          "seconds": 4.616550916005508,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
-            "OB-io9-genius#003",
-            "PH-HX9903_15#019"
+            "PH-HX9903_15#019",
+            "OB-io9-genius#003"
           ],
           "judge": {
-            "faithful": false,
-            "unsupported_claims": [
-              "The Sonicare 9300 has a SmartTimer"
-            ]
+            "faithful": true,
+            "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q05",
@@ -477,9 +489,10 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 3.872508458000084,
+          "seconds": 4.6484453750017565,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#032",
             "OB-io9-genius#004"
@@ -489,7 +502,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q06",
@@ -506,22 +520,21 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 2.151119458001631,
+          "seconds": 4.624060375004774,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX4042_81#010",
             "OB-io6#036"
           ],
           "judge": {
-            "faithful": false,
-            "unsupported_claims": [
-              "Sonicare 5000",
-              "Oral-B iO6"
-            ]
+            "faithful": true,
+            "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q07",
@@ -538,71 +551,73 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 5.381999541998084,
+          "seconds": 4.812056624999968,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#028",
-            "PH-HX9903_15#029",
-            "PH-HX9903_15#030",
-            "PH-HX9903_15#031",
-            "OB-io9-genius#002",
-            "OB-io9-genius#003"
+            "OB-io9-genius#002"
           ],
           "judge": {
             "faithful": false,
             "unsupported_claims": [
-              "number of brushing modes for Sonicare DiamondClean Smart 9300",
-              "number of brushing modes for Oral-B iO9 Genius"
+              "The Sonicare DiamondClean Smart 9300 Rechargeable Toothbrush has 4 brushing modes: Clean, Deep Clean+, Gum Health, and White+"
             ]
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q07B",
           "category": "overall_comparison",
           "question": "Compare the Sonicare 9300 and the Oral-B iO9 overall",
           "status": "answered",
-          "passed": false,
-          "failures": [
-            "contains: missing phrases: Price"
-          ],
+          "passed": true,
+          "failures": [],
           "checks": {
             "status": true,
             "has_citations": true,
             "citation_valid": true,
             "grounded": true,
-            "contains": false,
+            "correct": true,
+            "contains": true,
             "brands": true,
             "retrieval": true
           },
-          "seconds": 14.33514566699887,
+          "seconds": 5.49796225001046,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#000",
+            "PH-HX9903_15#028",
+            "PH-HX9903_15#029",
+            "PH-HX9903_15#030",
+            "PH-HX9903_15#031",
+            "PH-HX9903_15#032",
+            "PH-HX9903_15#014",
+            "PH-HX9903_15#019",
+            "PH-HX9903_15#006",
+            "PH-HX9903_15#023",
+            "PH-HX9903_15#011",
             "OB-io9-genius#000",
             "OB-io9-genius#002",
+            "OB-io9-genius#003",
             "OB-io9-genius#004",
             "OB-io9-genius#001",
-            "OB-io9-genius#003",
             "OB-io9-genius#046",
             "OB-io9-genius#022",
             "OB-io9-genius#045"
           ],
           "judge": {
-            "faithful": false,
-            "unsupported_claims": [
-              "Sonicare 9300 has 4 brushing modes",
-              "pressure sensor rings purple",
-              "timer with BrushPacer and SmartTimer",
-              "battery life is 14 days",
-              "comes with a charging base, glass, and stand"
-            ]
+            "faithful": true,
+            "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q08",
@@ -618,21 +633,21 @@
             "grounded": true,
             "brands": true
           },
-          "seconds": 3.0194617079978343,
+          "seconds": 4.371289332993911,
           "used_llm": true,
           "fell_back": false,
+          "repaired": true,
           "cited": [
-            "OB-io2#000",
-            "OB-io2#007"
+            "OB-io2#007",
+            "OB-io2#000"
           ],
           "judge": {
-            "faithful": false,
-            "unsupported_claims": [
-              "cheapest"
-            ]
+            "faithful": true,
+            "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q09",
@@ -649,9 +664,10 @@
             "contains": true,
             "brands": true
           },
-          "seconds": 7.950911416999588,
-          "used_llm": false,
-          "fell_back": true,
+          "seconds": 4.905084041994996,
+          "used_llm": true,
+          "fell_back": false,
+          "repaired": true,
           "cited": [
             "PH-HX7413_07#011",
             "PH-HX7412_05#013",
@@ -664,7 +680,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q10",
@@ -680,9 +697,10 @@
             "grounded": true,
             "brands": true
           },
-          "seconds": 7.354317375000392,
+          "seconds": 4.486614875000669,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9990_12#037",
             "PH-HX9903_15#034",
@@ -695,7 +713,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q11",
@@ -711,38 +730,41 @@
             "grounded": true,
             "retrieval": true
           },
-          "seconds": 1.3469364580014371,
+          "seconds": 4.544272833998548,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
-            "OB-io9-genius#043"
+            "OB-io9-genius#042",
+            "OB-io9-genius#043",
+            "OB-io9-genius#044"
           ],
           "judge": {
             "faithful": true,
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q12",
           "category": "ambiguous",
           "question": "What is the timer on the Sonicare 6500?",
           "status": "answered",
-          "passed": false,
-          "failures": [
-            "contains: missing phrases: HX7413/07, HX7412/05"
-          ],
+          "passed": true,
+          "failures": [],
           "checks": {
             "status": true,
             "has_citations": true,
             "citation_valid": true,
             "grounded": true,
-            "contains": false
+            "contains": true
           },
-          "seconds": 3.9980732500043814,
+          "seconds": 4.753587291997974,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX7413_07#016",
             "PH-HX7412_05#019"
@@ -752,7 +774,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N01",
@@ -769,13 +792,15 @@
             "no_citations": true,
             "contains": true
           },
-          "seconds": 0.009153207996860147,
+          "seconds": 0.00983220900525339,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N02",
@@ -792,13 +817,15 @@
             "no_citations": true,
             "contains": true
           },
-          "seconds": 0.007130417005100753,
+          "seconds": 0.008051917000557296,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S01",
@@ -815,13 +842,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.005550040994421579,
+          "seconds": 0.006198917006258853,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S02",
@@ -838,13 +867,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.0033950830038520508,
+          "seconds": 0.004964209001627751,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S03",
@@ -861,13 +892,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.0035620409980765544,
+          "seconds": 0.004357915997388773,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S04",
@@ -883,13 +916,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.013429207996523473,
+          "seconds": 0.014041500005987473,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S05",
@@ -905,13 +940,14 @@
             "grounded": true,
             "contains": true
           },
-          "seconds": 10.474745416002406,
+          "seconds": 4.763218834006693,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX7413_07#032",
-            "PH-HX9990_12#031",
             "PH-HX7413_07#035",
+            "PH-HX9990_12#031",
             "OB-io4#008",
             "OB-io4#009",
             "OB-io3#008"
@@ -921,7 +957,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T01",
@@ -938,9 +975,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 2.4824957079981687,
+          "seconds": 4.610146874998463,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#000"
           ],
@@ -949,7 +987,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T02",
@@ -966,9 +1005,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 1.5219753330020467,
+          "seconds": 4.914757749997079,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io9-genius#000"
           ],
@@ -977,7 +1017,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T03",
@@ -994,9 +1035,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 2.8734508749985253,
+          "seconds": 4.69828004098963,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io6#007",
             "OB-io6#008"
@@ -1006,7 +1048,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T04",
@@ -1023,9 +1066,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 1.9843175420028274,
+          "seconds": 4.557346417001099,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX4042_81#006"
           ],
@@ -1034,7 +1078,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T05",
@@ -1051,9 +1096,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 2.896431625005789,
+          "seconds": 4.412007625011029,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#032"
           ],
@@ -1062,7 +1108,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T06",
@@ -1080,9 +1127,10 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 3.844997082996997,
+          "seconds": 4.629097208002349,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX7422_03#000",
             "OB-io7#000"
@@ -1092,7 +1140,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T07",
@@ -1110,9 +1159,10 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 5.8763901659986,
+          "seconds": 4.487500041999738,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX4042_81#019",
             "PH-HX4042_81#020",
@@ -1120,11 +1170,14 @@
             "OB-io3#014"
           ],
           "judge": {
-            "faithful": true,
-            "unsupported_claims": []
+            "faithful": false,
+            "unsupported_claims": [
+              "Whitening"
+            ]
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T08",
@@ -1141,9 +1194,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 1.706194416998187,
+          "seconds": 4.547219582993421,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io2#000"
           ],
@@ -1152,7 +1206,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T09",
@@ -1169,20 +1224,23 @@
             "contains": true,
             "brands": true
           },
-          "seconds": 3.153991750004934,
+          "seconds": 4.091560250002658,
           "used_llm": true,
           "fell_back": false,
+          "repaired": true,
           "cited": [
-            "OB-io4#000"
+            "OB-io4#000",
+            "OB-io4#032"
           ],
           "judge": {
             "faithful": false,
             "unsupported_claims": [
-              "cheapest Oral-B with an app"
+              "features Bluetooth\u00ae connectivity for the app"
             ]
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T10",
@@ -1199,9 +1257,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 2.6948382089976803,
+          "seconds": 4.4030049159919145,
           "used_llm": true,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9990_12#000"
           ],
@@ -1210,42 +1269,97 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N03",
           "category": "not_found",
           "question": "Does the Sonicare 9300 come with a UV sanitizer?",
-          "status": "answered",
-          "passed": false,
-          "failures": [
-            "status: expected not_found, got answered",
-            "no_citations: cited ['PH-HX9903_15#020', 'PH-HX9903_15#021', 'PH-HX9903_15#022', 'PH-HX9903_15#023']",
-            "contains: missing phrases: not found in sources"
-          ],
+          "status": "not_found",
+          "passed": true,
+          "failures": [],
           "checks": {
-            "status": false,
+            "status": true,
             "has_citations": null,
             "citation_valid": null,
             "grounded": null,
-            "no_citations": false,
-            "contains": false
+            "no_citations": true,
+            "contains": true
           },
-          "seconds": 0.7970090830058325,
+          "seconds": 0.01048583400552161,
           "used_llm": false,
-          "fell_back": true,
+          "fell_back": false,
+          "repaired": false,
+          "cited": [],
+          "judge": null,
+          "repeat": 0,
+          "xfail": null,
+          "llm_error": null
+        },
+        {
+          "id": "N06",
+          "category": "not_found",
+          "question": "Does the Oral-B iO9 come with a travel case and a UV sanitizer?",
+          "status": "answered",
+          "passed": true,
+          "failures": [],
+          "checks": {
+            "status": true,
+            "has_citations": true,
+            "citation_valid": true,
+            "grounded": true,
+            "contains": true,
+            "retrieval": true
+          },
+          "seconds": 4.664625667006476,
+          "used_llm": true,
+          "fell_back": false,
+          "repaired": false,
           "cited": [
-            "PH-HX9903_15#020",
-            "PH-HX9903_15#021",
-            "PH-HX9903_15#022",
-            "PH-HX9903_15#023"
+            "OB-io9-genius#042",
+            "OB-io9-genius#043",
+            "OB-io9-genius#044"
           ],
           "judge": {
             "faithful": true,
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": "'come with' triggers the included-items lookup, so the answer lists the box contents and never says the asked-about item is not found"
+          "xfail": null,
+          "llm_error": null
+        },
+        {
+          "id": "Q13",
+          "category": "included_items",
+          "question": "What comes with the Oral-B iO9?",
+          "status": "answered",
+          "passed": true,
+          "failures": [],
+          "checks": {
+            "status": true,
+            "has_citations": true,
+            "citation_valid": true,
+            "grounded": true,
+            "forbidden": true,
+            "retrieval": true
+          },
+          "seconds": 4.515804834009032,
+          "used_llm": true,
+          "fell_back": false,
+          "repaired": false,
+          "cited": [
+            "OB-io9-genius#042",
+            "OB-io9-genius#043",
+            "OB-io9-genius#044"
+          ],
+          "judge": {
+            "faithful": true,
+            "unsupported_claims": []
+          },
+          "repeat": 0,
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N04",
@@ -1263,13 +1377,15 @@
             "no_citations": true,
             "contains": true
           },
-          "seconds": 0.008496875001583248,
+          "seconds": 0.0072002920060185716,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N05",
@@ -1287,13 +1403,15 @@
             "no_citations": true,
             "contains": true
           },
-          "seconds": 0.006315250000625383,
+          "seconds": 0.0051700420008273795,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S06",
@@ -1310,13 +1428,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.005393374995037448,
+          "seconds": 0.003732125012902543,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S07",
@@ -1333,13 +1453,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.003795290998823475,
+          "seconds": 0.003701541994814761,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S08",
@@ -1356,13 +1478,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.0042940830026054755,
+          "seconds": 0.003931125000235625,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S09",
@@ -1379,13 +1503,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.004273209000530187,
+          "seconds": 0.0034692079934757203,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S10",
@@ -1402,13 +1528,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.00292941699444782,
+          "seconds": 0.003334332999656908,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S11",
@@ -1424,21 +1552,23 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.012982000000192784,
+          "seconds": 0.013315165997482836,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         }
       ]
     },
     "fallback": {
       "label": "Safe writer only (no LLM)",
       "summary": {
-        "total": 38,
-        "passed": 38,
+        "total": 41,
+        "passed": 41,
         "repeats": 1,
         "pass_rate_per_repeat": [
           1.0
@@ -1451,7 +1581,8 @@
           "refusal_accuracy": 1.0,
           "not_found_accuracy": 1.0,
           "retrieval_hit_rate": 1.0,
-          "judge_faithfulness": 0.875
+          "llm_call_success": null,
+          "judge_faithfulness": 0.8846153846153846
         },
         "gates": {
           "pass_rate": {
@@ -1488,28 +1619,33 @@
             "value": 1.0,
             "minimum": 0.9,
             "passed": true
+          },
+          "llm_call_success": {
+            "value": null,
+            "minimum": 0.95,
+            "passed": true
           }
         },
         "all_gates_passed": true,
         "llm_used_in": 0,
         "llm_fell_back_in": 0,
+        "llm_repaired_in": 0,
+        "llm_errors": 0,
+        "llm_error_sample": null,
         "known_gaps": {
-          "cases": [
-            "N03"
-          ],
-          "still_failing": [
-            "N03"
-          ],
+          "cases": [],
+          "still_failing": [],
           "unexpectedly_passing": []
         },
         "judge": {
-          "judged": 24,
+          "judged": 26,
           "errors": 0,
-          "reliable": false
+          "reliable": false,
+          "error_sample": null
         },
-        "avg_seconds": 0.007567932000759021,
-        "p50_seconds": 0.00709366599767236,
-        "p95_seconds": 0.024564750005083624
+        "avg_seconds": 0.00817038321962705,
+        "p50_seconds": 0.007944875003886409,
+        "p95_seconds": 0.014108540999586694
       },
       "cases": [
         {
@@ -1527,9 +1663,10 @@
             "contains": true,
             "retrieval": true
           },
-          "seconds": 0.0030047500040382147,
+          "seconds": 0.0032237920095212758,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io9-genius#003"
           ],
@@ -1538,7 +1675,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q02",
@@ -1555,9 +1693,10 @@
             "contains": true,
             "retrieval": true
           },
-          "seconds": 0.009062333003384992,
+          "seconds": 0.007946833997266367,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#019"
           ],
@@ -1566,7 +1705,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q03",
@@ -1583,9 +1723,10 @@
             "contains": true,
             "retrieval": true
           },
-          "seconds": 0.0064658750052331015,
+          "seconds": 0.008020416993531398,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#006"
           ],
@@ -1594,7 +1735,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q04",
@@ -1611,9 +1753,10 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 0.00790433299698634,
+          "seconds": 0.0040392920054728165,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#019",
             "OB-io9-genius#003"
@@ -1623,7 +1766,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q05",
@@ -1640,21 +1784,21 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 0.008249625003372785,
+          "seconds": 0.008539583010133356,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#032",
             "OB-io9-genius#004"
           ],
           "judge": {
-            "faithful": false,
-            "unsupported_claims": [
-              "Sonicare DiamondClean Smart 9300 Rechargeable Toothbrush: Ring lights up purple; Vibration and pulsing sound"
-            ]
+            "faithful": true,
+            "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q06",
@@ -1671,9 +1815,10 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 0.008368916001927573,
+          "seconds": 0.007595207993290387,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX4042_81#010",
             "OB-io6#036"
@@ -1683,7 +1828,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q07",
@@ -1700,9 +1846,10 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 0.006938624996109866,
+          "seconds": 0.007583500002510846,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#028",
             "PH-HX9903_15#029",
@@ -1712,13 +1859,12 @@
             "OB-io9-genius#003"
           ],
           "judge": {
-            "faithful": false,
-            "unsupported_claims": [
-              "Sonicare DiamondClean Smart 9300 Rechargeable Toothbrush has 4 modes"
-            ]
+            "faithful": true,
+            "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q07B",
@@ -1732,13 +1878,15 @@
             "has_citations": true,
             "citation_valid": true,
             "grounded": true,
+            "correct": true,
             "contains": true,
             "brands": true,
             "retrieval": true
           },
-          "seconds": 0.00523862500267569,
+          "seconds": 0.00873812499048654,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#000",
             "OB-io9-genius#000",
@@ -1765,7 +1913,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q08",
@@ -1781,19 +1930,23 @@
             "grounded": true,
             "brands": true
           },
-          "seconds": 0.009305250001489185,
+          "seconds": 0.010132416995475069,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io2#000",
             "OB-io2#007"
           ],
           "judge": {
-            "faithful": true,
-            "unsupported_claims": []
+            "faithful": false,
+            "unsupported_claims": [
+              "Ranked 7 single-brush product(s) by listed price; twin packs are left out because their price covers two brushes. Prices are a snapshot."
+            ]
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q09",
@@ -1810,9 +1963,10 @@
             "contains": true,
             "brands": true
           },
-          "seconds": 0.007721041998593137,
+          "seconds": 0.008295791994896717,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX7413_07#011",
             "PH-HX7412_05#013",
@@ -1825,7 +1979,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q10",
@@ -1841,9 +1996,10 @@
             "grounded": true,
             "brands": true
           },
-          "seconds": 0.026696082997659687,
+          "seconds": 0.02573316599591635,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9990_12#037",
             "PH-HX9903_15#034",
@@ -1856,7 +2012,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q11",
@@ -1872,9 +2029,10 @@
             "grounded": true,
             "retrieval": true
           },
-          "seconds": 0.0059834999992745,
+          "seconds": 0.009297500000684522,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io9-genius#042",
             "OB-io9-genius#043",
@@ -1885,7 +2043,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "Q12",
@@ -1901,9 +2060,10 @@
             "grounded": true,
             "contains": true
           },
-          "seconds": 0.008208250001189299,
+          "seconds": 0.010335958999348804,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX7413_07#016",
             "PH-HX7412_05#019"
@@ -1913,7 +2073,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N01",
@@ -1930,13 +2091,15 @@
             "no_citations": true,
             "contains": true
           },
-          "seconds": 0.007537417004641611,
+          "seconds": 0.00734858401119709,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N02",
@@ -1953,13 +2116,15 @@
             "no_citations": true,
             "contains": true
           },
-          "seconds": 0.005575791998126078,
+          "seconds": 0.0071749170019757,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S01",
@@ -1976,13 +2141,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.003320957999676466,
+          "seconds": 0.00493112500407733,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S02",
@@ -1999,13 +2166,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.00402754099923186,
+          "seconds": 0.004147999992710538,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S03",
@@ -2022,13 +2191,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.0025211250031134114,
+          "seconds": 0.004311167009291239,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S04",
@@ -2044,13 +2215,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.013632000001962297,
+          "seconds": 0.014108540999586694,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S05",
@@ -2066,9 +2239,10 @@
             "grounded": true,
             "contains": true
           },
-          "seconds": 0.024564750005083624,
+          "seconds": 0.023924541994347237,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX7413_07#032",
             "PH-HX9990_12#031",
@@ -2082,7 +2256,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T01",
@@ -2099,9 +2274,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 0.008540708004147746,
+          "seconds": 0.00880825000058394,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#000"
           ],
@@ -2110,7 +2286,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T02",
@@ -2127,9 +2304,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 0.00784229199780384,
+          "seconds": 0.00858541700290516,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io9-genius#000"
           ],
@@ -2138,7 +2316,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T03",
@@ -2155,9 +2334,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 0.008106375003990252,
+          "seconds": 0.00859308399958536,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io6#007",
             "OB-io6#008"
@@ -2167,7 +2347,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T04",
@@ -2184,9 +2365,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 0.007627917002537288,
+          "seconds": 0.009140124995610677,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX4042_81#006"
           ],
@@ -2195,7 +2377,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T05",
@@ -2212,9 +2395,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 0.00709366599767236,
+          "seconds": 0.007944875003886409,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9903_15#032"
           ],
@@ -2223,7 +2407,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T06",
@@ -2241,9 +2426,10 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 0.005822834005812183,
+          "seconds": 0.008071832999121398,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX7422_03#000",
             "OB-io7#000"
@@ -2253,7 +2439,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T07",
@@ -2271,9 +2458,10 @@
             "brands": true,
             "retrieval": true
           },
-          "seconds": 0.003124666996882297,
+          "seconds": 0.010703874999308027,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX4042_81#019",
             "PH-HX4042_81#020",
@@ -2283,11 +2471,12 @@
           "judge": {
             "faithful": false,
             "unsupported_claims": [
-              "Clean & Protect"
+              "Oral-B iO Series 3 Clean & Protect Rechargeable Electric Toothbrush, Azalea Pink: 3 modes: Daily Clean, Whitening, Sensitive"
             ]
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T08",
@@ -2304,9 +2493,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 0.0075674580002669245,
+          "seconds": 0.007483416004106402,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io2#000"
           ],
@@ -2315,7 +2505,8 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T09",
@@ -2332,19 +2523,23 @@
             "contains": true,
             "brands": true
           },
-          "seconds": 0.006698417004372459,
+          "seconds": 0.0083306669985177,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "OB-io4#000",
             "OB-io4#032"
           ],
           "judge": {
-            "faithful": true,
-            "unsupported_claims": []
+            "faithful": false,
+            "unsupported_claims": [
+              "Note: Ranked 5 single-brush product(s) by listed price; twin packs are left out because their price covers two brushes. Prices are a snapshot."
+            ]
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "T10",
@@ -2361,9 +2556,10 @@
             "correct": true,
             "retrieval": true
           },
-          "seconds": 0.008303542002977338,
+          "seconds": 0.008005208990653045,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [
             "PH-HX9990_12#000"
           ],
@@ -2372,42 +2568,97 @@
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N03",
           "category": "not_found",
           "question": "Does the Sonicare 9300 come with a UV sanitizer?",
-          "status": "answered",
-          "passed": false,
-          "failures": [
-            "status: expected not_found, got answered",
-            "no_citations: cited ['PH-HX9903_15#020', 'PH-HX9903_15#021', 'PH-HX9903_15#022', 'PH-HX9903_15#023']",
-            "contains: missing phrases: not found in sources"
-          ],
+          "status": "not_found",
+          "passed": true,
+          "failures": [],
           "checks": {
-            "status": false,
+            "status": true,
             "has_citations": null,
             "citation_valid": null,
             "grounded": null,
-            "no_citations": false,
-            "contains": false
+            "no_citations": true,
+            "contains": true
           },
-          "seconds": 0.007688541001698468,
+          "seconds": 0.0032127500016940758,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
+          "cited": [],
+          "judge": null,
+          "repeat": 0,
+          "xfail": null,
+          "llm_error": null
+        },
+        {
+          "id": "N06",
+          "category": "not_found",
+          "question": "Does the Oral-B iO9 come with a travel case and a UV sanitizer?",
+          "status": "answered",
+          "passed": true,
+          "failures": [],
+          "checks": {
+            "status": true,
+            "has_citations": true,
+            "citation_valid": true,
+            "grounded": true,
+            "contains": true,
+            "retrieval": true
+          },
+          "seconds": 0.0041047500126296654,
+          "used_llm": false,
+          "fell_back": false,
+          "repaired": false,
           "cited": [
-            "PH-HX9903_15#020",
-            "PH-HX9903_15#021",
-            "PH-HX9903_15#022",
-            "PH-HX9903_15#023"
+            "OB-io9-genius#042",
+            "OB-io9-genius#043",
+            "OB-io9-genius#044"
           ],
           "judge": {
             "faithful": true,
             "unsupported_claims": []
           },
           "repeat": 0,
-          "xfail": "'come with' triggers the included-items lookup, so the answer lists the box contents and never says the asked-about item is not found"
+          "xfail": null,
+          "llm_error": null
+        },
+        {
+          "id": "Q13",
+          "category": "included_items",
+          "question": "What comes with the Oral-B iO9?",
+          "status": "answered",
+          "passed": true,
+          "failures": [],
+          "checks": {
+            "status": true,
+            "has_citations": true,
+            "citation_valid": true,
+            "grounded": true,
+            "forbidden": true,
+            "retrieval": true
+          },
+          "seconds": 0.007605999999213964,
+          "used_llm": false,
+          "fell_back": false,
+          "repaired": false,
+          "cited": [
+            "OB-io9-genius#042",
+            "OB-io9-genius#043",
+            "OB-io9-genius#044"
+          ],
+          "judge": {
+            "faithful": true,
+            "unsupported_claims": []
+          },
+          "repeat": 0,
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N04",
@@ -2425,13 +2676,15 @@
             "no_citations": true,
             "contains": true
           },
-          "seconds": 0.007879292003053706,
+          "seconds": 0.007786375004798174,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "N05",
@@ -2449,13 +2702,15 @@
             "no_citations": true,
             "contains": true
           },
-          "seconds": 0.005287457999656908,
+          "seconds": 0.007285499988938682,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S06",
@@ -2472,13 +2727,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.00380708299780963,
+          "seconds": 0.005408999990322627,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S07",
@@ -2495,13 +2752,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.003739583000424318,
+          "seconds": 0.004444417005288415,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S08",
@@ -2518,13 +2777,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.003228916997613851,
+          "seconds": 0.003949040998122655,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S09",
@@ -2541,13 +2802,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.0035470000002533197,
+          "seconds": 0.0034048329980578274,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S10",
@@ -2564,13 +2827,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.002220958995167166,
+          "seconds": 0.003385542004252784,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         },
         {
           "id": "S11",
@@ -2586,13 +2851,15 @@
             "grounded": null,
             "no_citations": true
           },
-          "seconds": 0.012816457994631492,
+          "seconds": 0.013302292005391791,
           "used_llm": false,
           "fell_back": false,
+          "repaired": false,
           "cited": [],
           "judge": null,
           "repeat": 0,
-          "xfail": null
+          "xfail": null,
+          "llm_error": null
         }
       ]
     }

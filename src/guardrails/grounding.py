@@ -50,7 +50,8 @@ def _numbers(text: str) -> set[str]:
 
 def verify(text: str, allowed_ids: set[str], allowed_text: str, allowed_urls: set[str] | None = None,
            max_not_found: int | None = None,
-           required_any: list[tuple[str, set[str]]] | None = None) -> GroundingReport:
+           required_any: list[tuple[str, set[str]]] | None = None,
+           required_text: list[str] | None = None, min_not_found: int | None = None) -> GroundingReport:
     """Check an answer against what was retrieved.
 
     allowed_ids    snippet ids the assistant was given
@@ -59,7 +60,13 @@ def verify(text: str, allowed_ids: set[str], allowed_text: str, allowed_urls: se
     max_not_found  how many "not found in sources" statements are justified (None = do not check).
                    More than that means the answer claims something is missing when the evidence has it.
     required_any   [(name, ids)]: the answer must cite at least one id from each group, so it cannot
-                   silently drop a product that has evidence (matters in comparisons)
+                   silently drop a product or a fact that has evidence (matters in comparisons)
+    required_text  strings the answer must contain, e.g. the SKUs that tell two same-name models apart
+    min_not_found  the answer must say "not found in sources" at least once when something is missing
+                   from the evidence, so a gap cannot be passed over in silence
+
+    Problems about something MISSING start with "does not", so a caller can tell them from false
+    statements and repair the draft instead of discarding it.
     """
     problems: list[str] = []
     ids = cited_ids(text)
@@ -90,5 +97,10 @@ def verify(text: str, allowed_ids: set[str], allowed_text: str, allowed_urls: se
     for name, group_ids in required_any or []:
         if not group_ids & set(ids):
             problems.append(f"does not mention {name}, which has evidence")
+    if min_not_found and text.lower().count(NOT_FOUND) < min_not_found:
+        problems.append(f'does not say "{NOT_FOUND}" although something asked about is missing from the evidence')
+    for needle in required_text or []:
+        if needle.lower() not in text.lower():
+            problems.append(f"does not name {needle}")
 
     return GroundingReport(ok=not problems, problems=problems)

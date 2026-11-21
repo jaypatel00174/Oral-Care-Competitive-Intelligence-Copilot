@@ -142,6 +142,31 @@ def test_llm_failure_falls_back_instead_of_breaking():
 
     a = ask("What is the timer on the Sonicare 9300?", llm=Broken())
     assert a.fell_back and a.status == "answered" and "BrushPacer" in a.text
+    assert a.llm_error and "model server is down" in a.llm_error      # the reason is reported, not swallowed
+
+
+def test_a_draft_rejected_by_the_guard_is_not_reported_as_an_llm_error():
+    a = ask("What is the timer on the Sonicare 9300?", llm=FakeListChatModel(responses=["The timer lasts 7 minutes."]))
+    assert a.fell_back and a.llm_error is None
+
+
+def test_throttle_spaces_model_calls_apart():
+    import time
+
+    from src.services.llm import Throttled
+
+    calls = []
+
+    class Model:
+        model_name = "fake"
+
+        def invoke(self, *_a, **_k):
+            calls.append(time.monotonic())
+
+    m = Throttled(Model(), interval=0.2)
+    m.invoke("a")
+    m.invoke("b")
+    assert calls[1] - calls[0] >= 0.19 and m.model_name == "fake"
 
 
 def test_llm_is_never_called_for_a_refused_question():
@@ -183,8 +208,89 @@ def test_false_not_found_from_the_model_is_replaced_by_the_real_value():
     assert a.fell_back and "BrushPacer and SmartTimer" in a.text
 
 
-def test_comparison_that_drops_a_product_is_replaced_by_the_full_answer():
+def test_comparison_that_drops_a_product_is_completed_from_the_evidence():
     q = "Compare the timer on the iO9 and the Sonicare 9300"
     ph = _fact_id(q, "timer")
     a = ask(q, llm=FakeListChatModel(responses=[f"The 9300 has BrushPacer and SmartTimer [{ph}]."]))
-    assert a.fell_back and {c.product_id.split("-")[0] for c in a.citations} == {"PH", "OB"}
+    # The draft's wording is kept; the missing Oral-B side is appended with its citation.
+    assert a.used_llm and a.repaired and not a.fell_back
+    assert a.text.startswith("The 9300 has BrushPacer and SmartTimer")
+    assert {c.product_id.split("-")[0] for c in a.citations} == {"PH", "OB"}
+
+
+def test_llm_draft_that_skips_a_fact_is_completed_not_discarded():
+    q = "Compare the Sonicare 9300 and the Oral-B iO9 overall"
+    ctx = retrieval.retrieve(q)
+    first = [f for f in ctx.facts if f.attribute == "price_usd"]            # a draft that only talks about price
+    ids = "".join(f"[{f.snippet_ids[0]}]" for f in first)
+    a = ask(q, llm=FakeListChatModel(responses=[f"The 9300 costs $199.96 and the iO9 costs $329.99 {ids}."]))
+    assert a.used_llm and a.repaired and not a.fell_back
+    for label in ("Brushing modes for", "Timer for", "Warranty for"):
+        assert label in a.text
+    assert a.text.startswith("The 9300 costs $199.96")     # the draft's own wording is kept first
+
+
+def _cite_all(question):
+    ctx = retrieval.retrieve(question)
+    return "".join(f"[{i}]" for f in ctx.facts if f.value for i in f.snippet_ids[:1])
+
+
+def test_caveat_note_the_model_drops_is_added_back():
+    q = "Which Sonicare models have an app?"
+    a = ask(q, llm=FakeListChatModel(responses=[f"Several Sonicare models have an app {_cite_all(q)}."]))
+    assert a.used_llm and a.repaired and "not the same as 'no'" in a.text
+
+
+def test_missing_item_the_model_does_not_mention_is_reported_not_found():
+    q = "Does the Oral-B iO9 come with a travel case and a UV sanitizer?"
+    a = ask(q, llm=FakeListChatModel(responses=[f"It comes with a travel case {_cite_all(q)}."]))
+    assert a.used_llm and a.repaired and not a.fell_back
+    assert "not found in sources" in a.text and "uv sanitizer" in a.text.lower()
+
+
+def test_model_that_already_says_not_found_is_left_alone():
+    q = "Does the Oral-B iO9 come with a travel case and a UV sanitizer?"
+    draft = f"It comes with a travel case {_cite_all(q)}. A UV sanitizer: not found in sources."
+    a = ask(q, llm=FakeListChatModel(responses=[draft]))
+    assert a.used_llm and a.text.count("not found in sources") == 1
+
+
+def test_false_statement_in_a_draft_is_not_repaired_it_is_replaced():
+    q = "What is the timer on the Sonicare 9300?"
+    sid = _fact_id(q, "timer")
+    a = ask(q, llm=FakeListChatModel(responses=[f"The timer lasts 7 minutes [{sid}]."]))
+    assert a.fell_back and not a.repaired and "7 minutes" not in a.text
+
+
+def test_ambiguous_model_must_name_both_skus_even_if_the_draft_does_not():
+    q = "What is the timer on the Sonicare 6500?"
+    ctx = retrieval.retrieve(q)
+    assert set(ctx.must_name) == {"HX7413/07", "HX7412/05"}
+    ids = "".join(f"[{f.snippet_ids[0]}]" for f in ctx.facts if f.value)
+    a = ask(q, llm=FakeListChatModel(responses=[f"Both 6500 models have BrushPacer and SmartTimer {ids}."]))
+    assert "HX7413/07" in a.text and "HX7412/05" in a.text and not a.fell_back
+
+
+# ---- asking for an item that is not on the pages ----------------------------------------------
+def test_item_that_is_not_on_the_pages_is_reported_not_found():
+    a = offline("Does the Sonicare 9300 come with a UV sanitizer?")
+    assert a.status == "not_found" and a.citations == []
+    assert "not found in sources" in a.text and "uv sanitizer" in a.text.lower()
+    assert "Travel case" not in a.text            # the unrelated box contents are not offered as an answer
+
+
+def test_item_that_is_on_the_pages_is_still_answered_with_citations():
+    a = offline("Does the iO9 come with a travel case?")
+    assert a.status == "answered" and a.citations and "Travel Case" in a.text
+
+
+def test_mixed_request_cites_what_exists_and_reports_what_does_not():
+    a = offline("Does the iO9 come with a travel case and a UV sanitizer?")
+    assert a.status == "answered" and a.citations
+    assert "Travel Case" in a.text and "uv sanitizer" in a.text.lower() and "not found in sources" in a.text
+
+
+def test_what_comes_with_a_product_is_not_mistaken_for_an_item():
+    assert retrieval.asked_items("What comes with the iO9?", [dict(p) for p in sql_store.list_products(sql_store.connect())]) == []
+    a = offline("What comes with the iO9?")
+    assert a.status == "answered" and "not found in sources" not in a.text

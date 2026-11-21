@@ -45,7 +45,12 @@ def _stated(field: str, raw: str, low: str) -> bool:
         forms = "|".join([str(n)] + ([_NUMBER_WORDS[n]] if n in _NUMBER_WORDS else []))
         # "5 modes", "5 brushing modes", "five smart cleaning modes"
         return bool(re.search(rf"\b(?:{forms})\s+(?:[\w-]+\s+){{0,3}}modes?\b", low))
-    return raw.lower() in low
+    if re.search(rf"(?<![\w.]){re.escape(raw.lower())}(?!\w)", low):      # not inside a longer number: "114 days"
+        return True
+    m = re.match(r"^(?:up to\s+)?(\d+)\s*(hour|day|week|month)s?\b", raw.lower())
+    if m:   # "14 days" is also written "14-day" or "14 day"
+        return bool(re.search(rf"\b{m.group(1)}[\s-]*{m.group(2)}s?\b", low))
+    return False
 
 
 def check(case: dict, text: str, cited_products: set[str], table: dict[str, dict[str, str]]) -> list[str]:

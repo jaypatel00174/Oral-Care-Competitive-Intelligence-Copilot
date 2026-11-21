@@ -39,17 +39,18 @@ class State(TypedDict, total=False):
     draft: str
     used_llm: bool
     fell_back: bool
+    llm_error: str
     answer: Answer
 
 
-def _finish(ctx: retrieval.Context, text: str, used_llm: bool, fell_back: bool) -> Answer:
+def _finish(ctx: retrieval.Context, text: str, used_llm: bool, fell_back: bool, repaired: bool = False) -> Answer:
     """Build the final Answer: resolve citation ids to sources and set the status."""
     citations = [ctx.snippets[i] for i in grounding.cited_ids(text) if i in ctx.snippets]
     status = "answered" if citations else "not_found"
     if status == "answered" and touches_health_topic(ctx.question):
         text += "\n\n" + refusals.HEALTH_NOTE
     return Answer(question=ctx.question, status=status, text=text, citations=citations,
-                  used_llm=used_llm, fell_back=fell_back, retrieved_ids=list(ctx.snippets))
+                  used_llm=used_llm, fell_back=fell_back, repaired=repaired, retrieved_ids=list(ctx.snippets))
 
 
 def build_graph(llm=None):
@@ -76,8 +77,9 @@ def build_graph(llm=None):
         if llm is not None and ctx.has_evidence:
             try:
                 return {"draft": answer_writer.write_with_llm(ctx, llm), "used_llm": True, "fell_back": False}
-            except Exception:  # model offline, rate limited, bad key ... never break the answer
-                return {"draft": answer_writer.write_offline(ctx), "used_llm": False, "fell_back": True}
+            except Exception as e:  # model offline, rate limited, bad key ... never break the answer
+                return {"draft": answer_writer.write_offline(ctx), "used_llm": False, "fell_back": True,
+                        "llm_error": f"{type(e).__name__}: {e}"[:200]}
         return {"draft": answer_writer.write_offline(ctx), "used_llm": False, "fell_back": False}
 
     def output_guard(state: State) -> dict:
@@ -88,26 +90,50 @@ def build_graph(llm=None):
         # model, plus any the notes themselves contain. With no facts (a text search) we cannot tell.
         missing = (sum(1 for f in ctx.facts if f.value is None) + len(ctx.unknown_models)
                    + sum(n.lower().count(refusals.NOT_FOUND) for n in ctx.notes))
-        # Every product that has evidence must be cited at least once, so a comparison cannot drop a side.
+        # Every product AND every fact that has evidence must be cited at least once, so an answer cannot
+        # drop a side of a comparison or quietly skip a value (the price, say) that the question asked for.
         needed: dict[str, set[str]] = {}
+        facts_with_value = [f for f in ctx.facts if f.value is not None and f.snippet_ids]
         for f in ctx.facts:
             if f.value is not None:
                 needed.setdefault(f.product_name, set()).update(f.snippet_ids)
+        required = list(needed.items()) + [(f"{f.product_name} / {f.label}", set(f.snippet_ids)) for f in facts_with_value]
+        sku_names = list(ctx.must_name)
 
         def check(text: str) -> grounding.GroundingReport:
             return grounding.verify(text, set(ctx.snippets), answer_writer.allowed_text(ctx),
                                     max_not_found=missing if ctx.facts else None,
-                                    required_any=list(needed.items()))
+                                    required_any=required, required_text=sku_names,
+                                    min_not_found=1 if missing else None)
 
+        repaired = False
+        if used_llm:                                         # caveat notes are always shown, in the writer's words
+            absent = [n for n in ctx.notes if n.lower() not in draft.lower()]
+            if absent:
+                draft, repaired = answer_writer.add_notes(draft, absent), True
         report = check(draft)
-        if not report.ok and used_llm:                       # bad LLM draft -> safe writer
-            draft, used_llm, fell_back = answer_writer.write_offline(ctx), False, True
-            report = check(draft)
+        if not report.ok and used_llm:
+            # Only omissions ("does not mention ...", "does not name ...") can be repaired: the facts left out
+            # are appended from the evidence and the draft is re-checked. Any false statement (invented number,
+            # unretrieved citation, foreign link) still sends the whole answer to the safe writer.
+            if all(p.startswith("does not") for p in report.problems):
+                cited = set(grounding.cited_ids(draft))
+                left_out = [f for f in facts_with_value if not set(f.snippet_ids) & cited]
+                unnamed = [ctx.must_name[s] for s in sku_names if s.lower() not in draft.lower()]
+                gaps = [] if refusals.NOT_FOUND in draft.lower() else answer_writer.gap_lines(ctx)
+                fixed = answer_writer.complete_draft(draft, left_out, unnamed, gaps)
+                if check(fixed).ok:
+                    draft, report, repaired = fixed, check(fixed), True
+            if not report.ok:                                # bad LLM draft -> safe writer
+                draft, used_llm, fell_back = answer_writer.write_offline(ctx), False, True
+                report = check(draft)
         if not report.ok:                                    # should never happen; say so honestly
             return {"answer": Answer(question=ctx.question, status="not_found", text=refusals.NOT_FOUND.capitalize() + ".",
                                      reason="grounding_failed: " + "; ".join(report.problems),
                                      retrieved_ids=list(ctx.snippets))}
-        return {"answer": _finish(ctx, draft, used_llm, fell_back)}
+        answer = _finish(ctx, draft, used_llm, fell_back, repaired)
+        answer.llm_error = state.get("llm_error")
+        return {"answer": answer}
 
     graph = StateGraph(State)
     graph.add_node("input_guard", input_guard)

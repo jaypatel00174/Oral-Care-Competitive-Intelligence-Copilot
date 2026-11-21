@@ -131,4 +131,6 @@ class Answer(BaseModel):
     reason: str | None = None            # why it was refused, e.g. "prompt_injection"
     used_llm: bool = False               # True if an LLM wrote the final text
     fell_back: bool = False              # True if the LLM draft failed the checks and we used the safe writer
+    repaired: bool = False               # True if the LLM draft left facts out and they were appended from the evidence
+    llm_error: str | None = None         # why the model call failed (e.g. "429 rate limit"); the safe writer answered
     retrieved_ids: list[str] = Field(default_factory=list)  # every snippet id the assistant could see
