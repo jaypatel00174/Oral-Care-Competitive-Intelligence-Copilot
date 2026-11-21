@@ -50,16 +50,14 @@ CALIBRATION = [
 
 def get_judge():
     """The judge model, or None when no LLM is configured."""
-    from src.services.llm import get_llm
-    from langchain_openai import ChatOpenAI
+    from src.services.llm import Throttled, build_chat, get_llm
 
     model = os.getenv("JUDGE_MODEL", "").strip()
     base = get_llm()
     if base is None or not model:
         return base
-
-    return ChatOpenAI(model=model, base_url=os.getenv("LLM_BASE_URL") or None,
-                      api_key=os.getenv("LLM_API_KEY") or "not-needed", temperature=0, timeout=90, max_retries=1)
+    # Same provider as the writer (LLM_PROVIDER), throttled and logged like it.
+    return Throttled(build_chat(model, max_retries=1), float(os.getenv("LLM_MIN_INTERVAL", "0") or 0))
 
 
 def _parse(raw: str) -> dict:
@@ -76,7 +74,9 @@ def _parse(raw: str) -> dict:
 
 def judge_text(llm, evidence: str, answer: str) -> dict:
     out = llm.invoke(PROMPT.format(evidence=evidence, answer=answer))
-    return _parse(getattr(out, "content", str(out)))
+    from src.services.llm import reply_text
+
+    return _parse(reply_text(out) if hasattr(out, "content") else str(out))
 
 
 def judge_answer(llm, a: Answer) -> dict | None:

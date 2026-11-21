@@ -83,6 +83,20 @@ class Fact:
 
 
 @dataclass
+class Focus:
+    """What a follow-up question refers back to, passed in explicitly by a conversation.
+
+    The earlier turn's products and attributes are used as given. They are never pasted into the question
+    text, because retrieval reads keywords from that text ("Rechargeable" would look like a charging question).
+    `note` is only for display and for the LLM prompt, for example "regarding Sonicare 9300 ...".
+    """
+
+    products: list[str] = field(default_factory=list)      # product ids
+    attributes: list[str] = field(default_factory=list)    # attribute keys such as "price_usd"
+    note: str = ""
+
+
+@dataclass
 class Context:
     """Everything the writer is allowed to use. Nothing outside this reaches an answer."""
 
@@ -221,6 +235,33 @@ def _citation(row: dict, names: dict[str, str]) -> Citation:
                     section=row["section"], text=row["text"], source_url=row["source_url"])
 
 
+def product_labels(products: list[dict]) -> dict[str, str]:
+    """product_id -> the name shown to the user. Two products can share a name (the two Series 6500
+    variants), so the SKU is added to tell them apart."""
+    name_count = Counter(p["name"] for p in products)
+    return {p["product_id"]: p["name"] if name_count[p["name"]] == 1 else f"{p['name']} ({p['sku']})"
+            for p in products}
+
+
+def build_facts(db, pairs: list[tuple[dict, str]], names: dict[str, str],
+                snippets: dict[str, Citation] | None = None) -> list[Fact]:
+    """One Fact per (product, attribute) pair, with the snippet ids that prove it.
+
+    value None means the pages do not state it ("not found in sources"). When `snippets` is given,
+    every cited snippet is also stored there, so the caller knows which ids may be cited.
+    """
+    facts = []
+    for p, attr in pairs:
+        value = _fact_value(p, attr)
+        rows = _evidence_rows(db, p["product_id"], attr) if value is not None else []
+        if snippets is not None:
+            for row in rows:
+                snippets[row["snippet_id"]] = _citation(row, names)
+        facts.append(Fact(p["product_id"], names[p["product_id"]], attr, LABELS.get(attr, attr),
+                          value, [r["snippet_id"] for r in rows]))
+    return facts
+
+
 def _search_both_sides(search, question: str, k: int, named: list[dict], brands: list[str]):
     """Vector search that keeps a comparison fair.
 
@@ -238,24 +279,34 @@ def _search_both_sides(search, question: str, k: int, named: list[dict], brands:
 
 
 # ------------------------------------------------------------------ the main entry point
-def retrieve(question: str, search=vector_store.search) -> Context:
-    """Turn a question into a Context. `search` can be swapped out in tests."""
+def retrieve(question: str, search=vector_store.search, focus: Focus | None = None) -> Context:
+    """Turn a question into a Context. `search` can be swapped out in tests.
+
+    `focus` (from a conversation) supplies the products and attributes a follow-up question leaves out.
+    What the question itself names always wins over the focus.
+    """
     db = sql_store.connect()
     try:
-        return _retrieve(question, db, search)
+        ctx = _retrieve(question, db, search, focus)
     finally:
         db.close()
+    if focus and focus.note and not ctx.out_of_scope:
+        ctx.question = f"{question} ({focus.note})"     # display and LLM prompt only; retrieval already ran
+    return ctx
 
 
-def _retrieve(question: str, db, search) -> Context:
+def _retrieve(question: str, db, search, focus: Focus | None = None) -> Context:
     products = [dict(r) for r in sql_store.list_products(db)]
     # Two products can share a name (the two Series 6500 variants): add the SKU to tell them apart.
-    name_count = Counter(p["name"] for p in products)
-    names = {p["product_id"]: p["name"] if name_count[p["name"]] == 1 else f"{p['name']} ({p['sku']})"
-             for p in products}
+    names = product_labels(products)
     named = resolve_products(question, products)
     brands = detect_brands(question)
     attrs = detect_attributes(question)
+    if focus:                                           # a follow-up: fill in only what the question leaves out
+        if not named and focus.products:
+            named = [p for p in products if p["product_id"] in focus.products]
+        if not attrs and focus.attributes:
+            attrs = list(focus.attributes)
     ctx = Context(question=question, unknown_models=find_unknown_models(question, products))
     cheapest, priciest = bool(_CHEAPEST.search(question)), bool(_PRICIEST.search(question))
     descriptive = bool(_DESCRIPTIVE.search(question))
@@ -300,13 +351,7 @@ def _retrieve(question: str, db, search) -> Context:
         pairs = [(p, a) for p in scope for a in use_attrs]
         if len(pairs) > MAX_FACTS:
             ctx.notes.append(f"Showing the first {MAX_FACTS} values only; ask about fewer products for the rest.")
-        for p, attr in pairs[:MAX_FACTS]:
-            value = _fact_value(p, attr)
-            rows = _evidence_rows(db, p["product_id"], attr) if value is not None else []
-            for row in rows:
-                ctx.snippets[row["snippet_id"]] = _citation(row, names)
-            ctx.facts.append(Fact(p["product_id"], names[p["product_id"]], attr, LABELS.get(attr, attr),
-                                  value, [r["snippet_id"] for r in rows]))
+        ctx.facts += build_facts(db, pairs[:MAX_FACTS], names, ctx.snippets)
 
     # An item the user asks for that is on none of the product's pages is "not found in sources".
     # If every asked item is missing, the unrelated box contents are dropped so they cannot pass for an answer.

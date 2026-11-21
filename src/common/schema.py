@@ -133,4 +133,8 @@ class Answer(BaseModel):
     fell_back: bool = False              # True if the LLM draft failed the checks and we used the safe writer
     repaired: bool = False               # True if the LLM draft left facts out and they were appended from the evidence
     llm_error: str | None = None         # why the model call failed (e.g. "429 rate limit"); the safe writer answered
+    fallback_reason: str | None = None   # agent mode: why the deterministic pipeline answered (not a model failure)
+    resolved_question: str | None = None  # in a conversation: the question after "its", "what about X" were resolved
+    mode: str = "pipeline"               # "pipeline" (code decides what to retrieve) or "agent" (the LLM chooses tools)
+    tool_calls: list[str] = Field(default_factory=list)   # agent mode: the tools the model called, e.g. "compare_products(...)"
     retrieved_ids: list[str] = Field(default_factory=list)  # every snippet id the assistant could see

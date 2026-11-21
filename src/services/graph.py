@@ -22,19 +22,25 @@ so a refused question never reaches retrieval or the LLM.
 """
 from __future__ import annotations
 
+import logging
 from typing import TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from src.common.schema import Answer
 from src.guardrails import grounding, refusals
 from src.guardrails.input_checks import check_question, touches_health_topic
+from src.common.log import event, get_logger, preview
 from src.services import answer_writer, retrieval
+from src.services.llm import describe_error
+
+log = get_logger("pipeline")
 
 
 class State(TypedDict, total=False):
     """The data passed from one step to the next."""
 
     question: str
+    focus: retrieval.Focus
     context: retrieval.Context
     draft: str
     used_llm: bool
@@ -59,13 +65,20 @@ def build_graph(llm=None):
     def input_guard(state: State) -> dict:
         verdict = check_question(state["question"])
         if verdict.allowed:
+            event(log, logging.DEBUG, "input_guard_ok", chars=len(state["question"]), question=preview(state["question"]))
             return {}
+        event(log, logging.INFO, "input_refused", reason=verdict.reason, chars=len(state["question"]),
+              question=preview(state["question"]))
         return {"answer": Answer(question=state["question"], status="refused",
                                  text=verdict.message, reason=verdict.reason)}
 
     def retrieve(state: State) -> dict:
-        ctx = retrieval.retrieve(state["question"])
+        ctx = retrieval.retrieve(state["question"], focus=state.get("focus"))
+        event(log, logging.DEBUG, "retrieved", facts=len(ctx.facts), missing=sum(f.value is None for f in ctx.facts),
+              snippets=len(ctx.snippets), page_hits=len(ctx.search_ids), unknown_models=ctx.unknown_models,
+              out_of_scope=ctx.out_of_scope, follow_up=bool(state.get("focus")))
         if ctx.out_of_scope:
+            event(log, logging.INFO, "out_of_scope", chars=len(state["question"]))
             return {"context": ctx, "answer": Answer(question=state["question"], status="out_of_scope",
                                                      text=refusals.OUT_OF_SCOPE, reason="out_of_scope")}
         return {"context": ctx}
@@ -78,8 +91,9 @@ def build_graph(llm=None):
             try:
                 return {"draft": answer_writer.write_with_llm(ctx, llm), "used_llm": True, "fell_back": False}
             except Exception as e:  # model offline, rate limited, bad key ... never break the answer
+                event(log, logging.WARNING, "safe_writer_used", why="model call failed", error=describe_error(e))
                 return {"draft": answer_writer.write_offline(ctx), "used_llm": False, "fell_back": True,
-                        "llm_error": f"{type(e).__name__}: {e}"[:200]}
+                        "llm_error": describe_error(e)}
         return {"draft": answer_writer.write_offline(ctx), "used_llm": False, "fell_back": False}
 
     def output_guard(state: State) -> dict:
@@ -112,6 +126,9 @@ def build_graph(llm=None):
             if absent:
                 draft, repaired = answer_writer.add_notes(draft, absent), True
         report = check(draft)
+        if not report.ok:
+            event(log, logging.WARNING if used_llm else logging.ERROR, "draft_rejected", from_llm=used_llm,
+                  problems=" | ".join(report.problems)[:400])
         if not report.ok and used_llm:
             # Only omissions ("does not mention ...", "does not name ...") can be repaired: the facts left out
             # are appended from the evidence and the draft is re-checked. Any false statement (invented number,
@@ -124,15 +141,21 @@ def build_graph(llm=None):
                 fixed = answer_writer.complete_draft(draft, left_out, unnamed, gaps)
                 if check(fixed).ok:
                     draft, report, repaired = fixed, check(fixed), True
+                    event(log, logging.INFO, "draft_repaired", facts_added=len(left_out), names_added=len(unnamed),
+                          gaps_added=len(gaps))
             if not report.ok:                                # bad LLM draft -> safe writer
+                event(log, logging.WARNING, "safe_writer_used", why="draft failed the checks")
                 draft, used_llm, fell_back = answer_writer.write_offline(ctx), False, True
                 report = check(draft)
         if not report.ok:                                    # should never happen; say so honestly
+            event(log, logging.ERROR, "grounding_failed", problems=" | ".join(report.problems)[:400])
             return {"answer": Answer(question=ctx.question, status="not_found", text=refusals.NOT_FOUND.capitalize() + ".",
                                      reason="grounding_failed: " + "; ".join(report.problems),
                                      retrieved_ids=list(ctx.snippets))}
         answer = _finish(ctx, draft, used_llm, fell_back, repaired)
         answer.llm_error = state.get("llm_error")
+        event(log, logging.INFO, "answer", status=answer.status, citations=len(answer.citations), used_llm=used_llm,
+              fell_back=fell_back, repaired=repaired, chars=len(answer.text))
         return {"answer": answer}
 
     graph = StateGraph(State)

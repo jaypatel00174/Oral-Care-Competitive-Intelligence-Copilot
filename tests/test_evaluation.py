@@ -141,3 +141,21 @@ def test_judge_failure_does_not_break_the_run():
 
     results, summary = run_eval.run(run_eval.QUESTIONS, llm=None, judge=Broken(), judge_reliable=True)
     assert summary["judge"]["errors"] > 0 and "judge_faithfulness" not in summary["metrics"]
+
+
+# ---- multi-turn conversations (offline, no model calls) -----------------------------------------
+def test_scripted_conversations_all_pass_offline():
+    from src.evaluation import conversation_eval
+
+    out = conversation_eval.run()
+    failed = [(r["conversation"], r["turn"], r["problems"]) for r in out["results"] if not r["passed"]]
+    assert out["all_passed"] and out["followups"] >= 6, failed
+
+
+def test_a_conversation_check_catches_a_follow_up_that_lost_its_topic():
+    from src.evaluation import conversation_eval
+    from src.services.conversation import Conversation
+
+    answer = Conversation().ask("and its price?", llm=None)          # nothing to refer to
+    turn = {"q": "and its price?", "followup": True, "expect_status": "answered", "must_contain": ["$199.96"]}
+    assert conversation_eval.check_turn(turn, answer)

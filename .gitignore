@@ -3,6 +3,8 @@ __pycache__/
 *.pyc
 .env
 .pytest_cache/
+logs/
+*.log
 # Generated / downloaded (rebuild with the pipeline commands in the README)
 # data/raw/
 # data/chroma/

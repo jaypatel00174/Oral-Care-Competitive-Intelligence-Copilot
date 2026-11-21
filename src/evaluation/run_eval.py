@@ -64,7 +64,50 @@ JUDGE_GATE = 0.85                      # only applied when the judge passed its 
 MODES = {
     "llm": ("LLM with safe-writer fallback", "auto"),
     "fallback": ("Safe writer only (no LLM)", None),
+    "agent": ("Agent: the LLM chooses tools, pipeline fallback", "agent"),
 }
+AGENT_CALLS_PER_QUESTION = 4      # typical: resolve_models, compare_products, then the final answer
+
+
+def estimate_model_calls(keys: list[str], n_cases: int, repeats: int, judge_on: bool) -> int:
+    """An UPPER bound on model calls for a run (refused and out-of-scope questions never reach the model)."""
+    calls = 3 if judge_on else 0                      # the judge's calibration examples
+    for k in keys:
+        reps = repeats if k in ("llm", "agent") else 1
+        writer = {"llm": n_cases * reps, "agent": n_cases * reps * AGENT_CALLS_PER_QUESTION}.get(k, 0)
+        calls += writer + (n_cases * reps if judge_on else 0)
+    return calls
+
+
+def confirm_hosted_calls(calls: int, assume_yes: bool = False, stream=None, load_env: bool = True) -> bool:
+    """Ask before a run that would call a hosted model: free tiers have a request limit, and a run can use it up.
+
+    No question is asked when no model is configured, when the model is local (Ollama), or with --yes.
+    Without a terminal (CI, a script) an unconfirmed run is refused instead of silently spending the quota.
+    """
+    from urllib.parse import urlparse
+
+    if load_env:
+        try:
+            from dotenv import load_dotenv
+
+            load_dotenv(override=True)
+        except ImportError:
+            pass
+    if calls == 0 or not os.getenv("LLM_MODEL", "").strip():
+        return True
+    host = urlparse(os.getenv("LLM_BASE_URL", "") or "").hostname or "the model provider"
+    if host in ("localhost", "127.0.0.1", "::1") or assume_yes:
+        return True
+    interval = float(os.getenv("LLM_MIN_INTERVAL", "0") or 0)
+    minutes = f", about {calls * interval / 60:.0f} min at LLM_MIN_INTERVAL={interval:g}" if interval else ""
+    print(f"This run may make up to ~{calls} model calls to {host}{minutes}.\n"
+          "A hosted free tier has a request limit, and this can use it up.")
+    if not (stream or sys.stdin).isatty():
+        print("Not confirmed (no terminal). Re-run with --yes to allow it, or use "
+              "`--mode fallback --no-judge` for a run that makes no model calls.")
+        return False
+    return input("Continue? [y/N] ").strip().lower() in ("y", "yes")
 
 
 @dataclass
@@ -247,12 +290,13 @@ def run(questions: Path, llm, repeats: int = 1, judge=None, judge_reliable: bool
     """
     cases = json.loads(questions.read_text(encoding="utf-8"))
     table = table if table is not None else truth.load_table()
+    agent = llm == "agent"          # the model chooses tools ("auto" below supplies the configured model)
     results: list[CaseResult] = []
     with sql_store.connect() as db:
         for rep in range(repeats):
             for case in cases:
                 t = time.perf_counter()
-                a = ask(case["question"], llm=llm)
+                a = ask(case["question"], llm="auto" if agent else llm, agent=agent)
                 seconds = time.perf_counter() - t
                 r = evaluate_case(case, a, db, table)
                 r.seconds, r.repeat = seconds, rep
@@ -396,16 +440,29 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Evaluate the comparison assistant.")
     ap.add_argument("--questions", type=Path, default=QUESTIONS)
     ap.add_argument("--out", type=Path, default=Path("outputs"))
-    ap.add_argument("--mode", choices=["both", "llm", "fallback"], default="both",
-                    help="both (default): run the LLM mode and the fallback-only mode")
+    ap.add_argument("--mode", choices=["both", "llm", "fallback", "agent"], default="both",
+                    help="both (default): the LLM mode and the fallback-only mode. agent: the model chooses tools "
+                         "(several model calls per question; never part of 'both')")
     ap.add_argument("--repeats", type=int, default=1,
                     help="repeat the LLM mode this many times to measure variation (fallback is deterministic, runs once)")
+    ap.add_argument("--yes", action="store_true",
+                    help="do not ask before making calls to a hosted model (a hosted free tier has a request limit)")
     ap.add_argument("--no-judge", action="store_true", help="skip the LLM-as-judge faithfulness check")
     ap.add_argument("--judge-gate", action="store_true",
                     help="make the judge score a quality gate even when the judge is the same model as the writer "
                          "(default: only gated when JUDGE_MODEL names a different model and calibration passed)")
     ap.add_argument("--no-retrieval", action="store_true", help="skip the retrieval recall evaluation")
     args = ap.parse_args()
+    from src.common.log import setup_logging
+
+    setup_logging("WARNING")        # model failures and fallbacks still show; set LOG_LEVEL=INFO to see every call
+
+    # Ask BEFORE anything that could call a hosted model (including the judge's calibration).
+    keys = ["llm", "fallback"] if args.mode == "both" else [args.mode]
+    n_cases = len(json.loads(args.questions.read_text(encoding="utf-8")))
+    calls = estimate_model_calls(keys, n_cases, max(1, args.repeats), judge_on=not args.no_judge)
+    if not confirm_hosted_calls(calls, assume_yes=args.yes):
+        return 2
 
     retrieval = None if args.no_retrieval else retrieval_eval.run()
 
@@ -424,10 +481,9 @@ def main() -> int:
                 gated = cal["reliable"] and (independent or args.judge_gate)
                 judge_info = {"enabled": True, "independent": independent, "gated": gated, **cal}
 
-    keys = ["llm", "fallback"] if args.mode == "both" else [args.mode]
     runs = {}
     for k in keys:
-        reps = max(1, args.repeats) if k == "llm" else 1
+        reps = max(1, args.repeats) if k in ("llm", "agent") else 1
         runs[k] = run(args.questions, MODES[k][1], repeats=reps, judge=judge,
                       judge_reliable=judge_info.get("gated"))
     write_report(runs, retrieval, judge_info, args.out)
