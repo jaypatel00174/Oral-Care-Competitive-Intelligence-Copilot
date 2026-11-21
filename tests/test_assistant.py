@@ -132,7 +132,8 @@ def test_bad_llm_draft_is_replaced_by_the_safe_writer(draft):
     a = ask(q, llm=FakeListChatModel(responses=[draft.format(id=_fact_id(q, "battery_life"))]))
     assert a.fell_back and not a.used_llm
     assert "14 days" in a.text and "evil.example" not in a.text and "30 days" not in a.text
-    assert grounding.verify(a.text, set(a.retrieved_ids), a.text).problems == []  # citations are all retrieved ids
+    checked = a.text_with_ids or a.text                       # the answer as the guard verified it (snippet ids)
+    assert grounding.verify(checked, set(a.retrieved_ids), checked).problems == []  # citations are all retrieved ids
 
 
 def test_llm_failure_falls_back_instead_of_breaking():

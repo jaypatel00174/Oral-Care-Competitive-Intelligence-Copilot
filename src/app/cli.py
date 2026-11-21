@@ -25,7 +25,11 @@ from src.services.conversation import Conversation  # noqa: E402
 def render(a: Answer) -> str:
     """Answer text followed by its sources, as plain text."""
     out = [a.text]
-    if a.citations:
+    if a.sources:
+        out.append("\nSources:")
+        for s in a.sources:
+            out.append(f"  [{s.number}] {s.title}\n      {s.url}\n      snippets: {', '.join(s.snippet_ids)}")
+    elif a.citations:                       # an answer that was not numbered (should not happen) still lists them
         out.append("\nSources:")
         for c in a.citations:
             out.append(f"  [{c.id}] {c.product_name} - {c.section}\n      {c.source_url}")

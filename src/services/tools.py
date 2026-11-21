@@ -155,6 +155,7 @@ def compare_products(product_ids: list[str], attributes: list[str] | None = None
         ids, understood, missing = _coerce_ids(list(product_ids), products)
         if missing:
             return {"error": f"Unknown product_id(s) {missing}.", "valid_ids": [p["product_id"] for p in products]}
+        skipped = ids[MAX_PRODUCTS:]                 # never cut silently: the caller must be able to say so
         ids = ids[:MAX_PRODUCTS]
         names = retrieval.product_labels(products)
         chosen = [p for i in ids for p in products if p["product_id"] == i]
@@ -166,6 +167,10 @@ def compare_products(product_ids: list[str], attributes: list[str] | None = None
               "note": f"A null value is '{NOT_FOUND}', which is not the same as 'no'. Cite snippets as [id]."}
     if understood:
         result["understood_as"] = understood         # names that were accepted in place of ids
+    if skipped:
+        result["skipped_products"] = skipped
+        result["note"] += (f" Only the first {MAX_PRODUCTS} of {MAX_PRODUCTS + len(skipped)} products were compared; "
+                           "the others were NOT. Say so in the answer, or call again for the rest.")
     return result
 
 

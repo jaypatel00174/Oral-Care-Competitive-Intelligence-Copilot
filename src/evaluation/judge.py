@@ -84,7 +84,7 @@ def judge_answer(llm, a: Answer) -> dict | None:
     if not a.citations:
         return None
     evidence = "\n".join(f"[{c.id}] {c.product_name} ({c.section}): {c.text}" for c in a.citations)
-    return judge_text(llm, evidence, a.text)
+    return judge_text(llm, evidence, a.text_with_ids or a.text)      # the judge's evidence is keyed by snippet id
 
 
 def calibrate(llm) -> dict:

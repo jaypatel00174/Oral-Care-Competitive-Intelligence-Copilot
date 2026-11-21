@@ -31,6 +31,7 @@ from src.guardrails import grounding, refusals
 from src.guardrails.input_checks import check_question, touches_health_topic
 from src.common.log import event, get_logger, preview
 from src.services import answer_writer, retrieval
+from src.services.citations import present
 from src.services.llm import describe_error
 
 log = get_logger("pipeline")
@@ -55,8 +56,9 @@ def _finish(ctx: retrieval.Context, text: str, used_llm: bool, fell_back: bool, 
     status = "answered" if citations else "not_found"
     if status == "answered" and touches_health_topic(ctx.question):
         text += "\n\n" + refusals.HEALTH_NOTE
-    return Answer(question=ctx.question, status=status, text=text, citations=citations,
-                  used_llm=used_llm, fell_back=fell_back, repaired=repaired, retrieved_ids=list(ctx.snippets))
+    answer = Answer(question=ctx.question, status=status, text=text, citations=citations,
+                    used_llm=used_llm, fell_back=fell_back, repaired=repaired, retrieved_ids=list(ctx.snippets))
+    return present(answer)      # verified with snippet ids above; now shown as numbered sources [1], [2] ...
 
 
 def build_graph(llm=None):

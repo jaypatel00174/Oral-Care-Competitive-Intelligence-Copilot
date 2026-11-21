@@ -142,6 +142,25 @@ def _evidence(a: Answer, db) -> tuple[str, set[str]]:
     return "\n".join(parts), set(a.retrieved_ids)
 
 
+def _sources_match(a: Answer) -> list[str]:
+    """The numbered sources must say exactly what the id-cited answer says: every [n] in the text exists, every
+    snippet that was cited sits under the source of its own page, and nothing extra is listed."""
+    import re
+
+    problems = []
+    listed = {s.number: s for s in a.sources}
+    shown = {int(n) for group in re.findall(r"\[(\d+(?:,\s*\d+)*)\]", a.text) for n in group.split(",")}
+    problems += [f"[{n}] has no source" for n in sorted(shown - set(listed))]
+    problems += [f"source [{n}] is never cited" for n in sorted(set(listed) - shown)]
+    url_of = {c.id: c.source_url for c in a.citations}
+    for s in a.sources:
+        problems += [f"{i} is listed under [{s.number}] but comes from another page" for i in s.snippet_ids
+                     if url_of.get(i) != s.url]
+    listed_ids = {i for s in a.sources for i in s.snippet_ids}
+    problems += [f"{c.id} is cited but not under any source" for c in a.citations if c.id not in listed_ids]
+    return problems
+
+
 def evaluate_case(case: dict, a: Answer, db, table: dict | None = None) -> CaseResult:
     checks: dict[str, bool | None] = {}
     failures: list[str] = []
@@ -165,7 +184,11 @@ def evaluate_case(case: dict, a: Answer, db, table: dict | None = None) -> CaseR
                 bad.append(c.id)
         record("citation_valid", not bad, "citations do not match stored snippets: " + ", ".join(bad))
         allowed_text, allowed_ids = _evidence(a, db)
-        report = grounding.verify(a.text, allowed_ids, allowed_text)
+        # Check the answer as it was verified, citing exact snippet ids (the shown text cites numbered sources).
+        report = grounding.verify(a.text_with_ids or a.text, allowed_ids, allowed_text)
+        if a.citations:
+            sources_ok = _sources_match(a)
+            record("sources", not sources_ok, "; ".join(sources_ok))
         record("grounded", report.ok, "; ".join(report.problems))
     else:
         record("has_citations", None)
@@ -173,7 +196,8 @@ def evaluate_case(case: dict, a: Answer, db, table: dict | None = None) -> CaseR
         record("grounded", None)
 
     if case.get("truth"):
-        problems = truth.check(case, a.text, cited_products, table if table is not None else truth.load_table())
+        problems = truth.check(case, a.text_with_ids or a.text, cited_products,
+                               table if table is not None else truth.load_table())
         record("correct", not problems, "; ".join(problems))
 
     if case.get("expect_no_citations"):

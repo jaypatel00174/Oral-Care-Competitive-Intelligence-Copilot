@@ -122,3 +122,15 @@ def test_get_product_and_get_evidence_accept_an_unambiguous_name():
     assert tools.get_product("Sonicare 9300")["product_id"] == NINE_THREE
     assert tools.get_evidence("iO9", "timer")["fact"]["product_id"] == IO9
     assert "valid_ids" in tools.get_product("Sonicare 6500")       # two products share that name: stay strict
+
+
+def test_comparing_more_products_than_the_limit_says_which_were_left_out():
+    all_ids = [p["product_id"] for p in tools.list_products()["products"]]
+    r = tools.compare_products(all_ids, ["price_usd"])
+    assert len({f["product_id"] for f in r["facts"]}) == tools.MAX_PRODUCTS
+    assert r["skipped_products"] == all_ids[tools.MAX_PRODUCTS:] and "were NOT" in r["note"]
+    assert "skipped_products" not in tools.compare_products(all_ids[:2], ["price_usd"])
+
+    from src.services.agent import render_for_model
+
+    assert "NOT compared" in render_for_model("compare_products", r)          # the agent's model is told too

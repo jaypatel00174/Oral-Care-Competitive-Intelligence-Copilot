@@ -33,6 +33,7 @@ from src.common.schema import Answer, Citation
 from src.guardrails import grounding, refusals
 from src.guardrails.input_checks import check_question, touches_health_topic
 from src.services import retrieval, tools
+from src.services.citations import present
 from src.services.llm import describe_error, reply_text
 from src.storage import sql_store
 
@@ -130,6 +131,10 @@ def render_for_model(name: str, result: dict) -> str:
                 lines.append(f"{_cite(f['snippet_ids'])} {f['product']} | {f['label']}: {_trim(f['value'])}")
         if result.get("understood_as"):
             lines.append("NOTE: names were understood as product ids: " + json.dumps(result["understood_as"]))
+        if result.get("skipped_products"):
+            lines.append(f"NOTE: NOT compared (limit {tools.MAX_PRODUCTS} products per call): "
+                         f"{', '.join(result['skipped_products'])}. Call compare_products again for them, or tell the "
+                         "user that the comparison covers only the products above.")
     elif name == "rank_products":
         attr = next((k for k in ("price_usd", "mode_count") if result["ranking"] and k in result["ranking"][0]), "value")
         for r in result["ranking"]:
@@ -388,9 +393,9 @@ def agent_events(question: str, llm) -> Iterator[dict]:
         text += "\n\n" + refusals.HEALTH_NOTE
     event(log, logging.INFO, "agent_done", tools_called=len(calls), citations=len(citations), revisions=revisions,
           chars=len(text), status="answered" if citations else "not_found")
-    yield {"event": "answer", "answer": Answer(
+    yield {"event": "answer", "answer": present(Answer(        # checked with snippet ids; shown as numbered sources
         question=question, status="answered" if citations else "not_found", text=text, citations=citations,
-        used_llm=True, retrieved_ids=sorted(allowed_ids), mode="agent", tool_calls=calls)}
+        used_llm=True, retrieved_ids=sorted(allowed_ids), mode="agent", tool_calls=calls))}
 
 
 def run_agent(question: str, llm) -> Answer:

@@ -235,7 +235,22 @@ python -m src.app.cli "..." --offline       # ignore .env and use the code-only 
 python -m src.app.cli "..." --agent         # let the model choose tools (see "Agent mode" below)
 ```
 
-Every answer cites snippet ids like `[PH-HX9903_15#019]` and lists the source pages. When the pages do not state
+Every answer cites **numbered sources**, one number per source page, like a reference list:
+
+```
+- Sonicare DiamondClean Smart 9300: BrushPacer and SmartTimer [1]
+- Oral-B iO Series 9 Genius: A built-in 2-minute timer ... [2]
+Sources:
+  [1] Sonicare DiamondClean Smart 9300 Rechargeable Toothbrush
+      https://www.usa.philips.com/c-p/HX9903_15/...
+      snippets: PH-HX9903_15#019, PH-HX9903_15#006
+```
+
+Inside, nothing is looser: the writer cites exact snippet ids (`[PH-HX9903_15#019]`) and every guard checks those. Only
+an answer that passed is renumbered for display (`src/services/citations.py`). In the JSON answer, `text` has the
+numbers, `sources` lists each page with its snippet ids, `citations` has every snippet's verbatim text, and
+`text_with_ids` keeps the id-cited version that was checked, for audits. The evaluation checks both versions and
+that every `[n]` matches its page. When the pages do not state
 something, the answer says `not found in sources` instead of guessing. The assistant also refuses prompt
 injection and medical or dental advice, and says so when a question is not about these toothbrushes.
 
@@ -468,6 +483,7 @@ python -m pytest tests -q -k "injection"        # tests whose name matches a wor
 | `tests/test_agent.py` | agent mode with scripted models: real citations, rejected drafts, failures, tool errors, step limit |
 | `tests/test_evaluation.py` | the evaluation checks themselves (ground truth, retrieval, judge, conversations, quality gates) |
 | `tests/test_evaluation_safety.py` | the evaluation asks before spending hosted-model quota |
+| `tests/test_citations.py` | numbered sources: one number per page, grouping, unknown ids left visible, the checked id version kept |
 | `tests/test_logging.py` | what is logged, request ids, no keys or question text at INFO, stderr-only, the MCP protocol surviving debug logs |
 
 ### Troubleshooting

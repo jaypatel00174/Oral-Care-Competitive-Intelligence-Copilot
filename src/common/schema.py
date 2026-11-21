@@ -117,6 +117,16 @@ class Citation(BaseModel):
     source_url: str   # the page to open to check it
 
 
+class Source(BaseModel):
+    """One numbered source page. The answer text cites it as [number]."""
+
+    number: int
+    url: str
+    title: str                        # the product(s) the cited snippets on this page are about
+    snippet_ids: list[str]            # the exact snippets used from this page (details in Answer.citations)
+    sections: list[str]               # where on the page, e.g. "Ease of use > Timer"
+
+
 class Answer(BaseModel):
     """What the assistant returns for one question. The API, CLI and evaluation all use this."""
 
@@ -126,8 +136,10 @@ class Answer(BaseModel):
     # "refused"      blocked by a guardrail (see `reason`)
     # "out_of_scope" not about these toothbrushes
     status: str
-    text: str
-    citations: list[Citation] = Field(default_factory=list)
+    text: str                            # for people: cites numbered sources, e.g. "BrushPacer [1]"
+    sources: list[Source] = Field(default_factory=list)   # [1], [2] ...: one per source page
+    citations: list[Citation] = Field(default_factory=list)   # every snippet used, with its verbatim text
+    text_with_ids: str | None = None     # the same answer citing exact snippet ids, as it was checked (for audits)
     reason: str | None = None            # why it was refused, e.g. "prompt_injection"
     used_llm: bool = False               # True if an LLM wrote the final text
     fell_back: bool = False              # True if the LLM draft failed the checks and we used the safe writer
